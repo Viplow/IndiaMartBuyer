@@ -3,8 +3,10 @@ import '../../core/session/app_session.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../data/models/home_models.dart';
 import '../../data/mock_data.dart';
+import '../product/product_page.dart';
 
 /// Home screen driven by SDUI. Shows generic name until login, then user name.
 class HomePage extends StatefulWidget {
@@ -23,9 +25,19 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+class _ChatMessage {
+  final bool isUser;
+  final String text;
+  _ChatMessage({required this.isUser, required this.text});
+}
+
 class _HomePageState extends State<HomePage> {
   int _selectedNavIndex = 0;
   int _selectedQuickFilter = 0;
+  int _searchCategoryIndex = 0; // 0 = Bicycle spare parts, 1 = Paper making machine
+  final _aiChatController = TextEditingController();
+  final List<_ChatMessage> _aiMessages = [];
+  final _aiScrollController = ScrollController();
 
   /// After login show name; until then show generic placeholder.
   String get _userName {
@@ -43,6 +55,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     currentUserName.removeListener(_onSessionChanged);
+    _aiChatController.dispose();
+    _aiScrollController.dispose();
     super.dispose();
   }
 
@@ -51,7 +65,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _selectedNavIndex == 0 ? _buildHomeContent(context) : _buildTabPlaceholder(context),
+      body: _selectedNavIndex == 0
+          ? _buildHomeContent(context)
+          : _selectedNavIndex == 1
+              ? _buildSearchListingContent(context)
+              : _selectedNavIndex == 2
+                  ? _buildAIChatContent(context)
+                  : _buildTabPlaceholder(context),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -59,31 +79,22 @@ class _HomePageState extends State<HomePage> {
   Widget _buildHomeContent(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        _buildHeader(context),
-        SliverToBoxAdapter(child: _buildSearchBar(context)),
+        _buildHeaderWithSearch(context),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
+              _yourGraphicsSection(),
+              const SizedBox(height: 24),
               _sectionHeader('Your Enquiries', 'View All →', onViewAll: () {}),
               ...MockData.enquiries.map((e) => _enquiryCard(e)),
               const SizedBox(height: 24),
               _sectionHeader('Recommended for You', 'See All →', onViewAll: () {}),
               ...MockData.recommended.map((r) => _recommendedCard(r)),
               const SizedBox(height: 24),
-              _sectionHeaderWithIcon(Icons.schedule, 'Continue Where You Left'),
+              _sectionHeaderWithIcon(Icons.refresh, 'Continue Where You Left'),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: MockData.continueCategories.length,
-                  itemBuilder: (context, i) {
-                    final c = MockData.continueCategories[i];
-                    return _continueCard(c);
-                  },
-                ),
-              ),
+              _continueWhereYouLeft(context),
               const SizedBox(height: 24),
               _sectionHeaderWithIcon(Icons.tune, 'Quick Filters'),
               const SizedBox(height: 12),
@@ -93,7 +104,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               ...MockData.trending.map((t) => _trendingRow(t)),
               const SizedBox(height: 24),
-              _sectionHeader('Browse by Category', 'All >', onViewAll: () {}),
+              _sectionHeader('Browse by Category', 'View All →', onViewAll: () {}),
               const SizedBox(height: 12),
               _browseGrid(context),
               const SizedBox(height: 24),
@@ -106,7 +117,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  /// Header + search in one teal block (Indiamart at top, search below with plus).
+  Widget _buildHeaderWithSearch(BuildContext context) {
     return SliverToBoxAdapter(
       child: Container(
         width: double.infinity,
@@ -114,23 +126,67 @@ class _HomePageState extends State<HomePage> {
           left: 20,
           right: 20,
           top: MediaQuery.of(context).padding.top + 16,
-          bottom: 24,
+          bottom: 16,
         ),
         color: const Color(0xFF1D8480),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                'Indiamart',
-                style: AppTypography.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Indiamart',
+                    style: AppTypography.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
+                ),
+              ],
             ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: AppColors.textTertiary, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Search for products & services',
+                      style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                    ),
+                  ),
+                  Material(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      onTap: () {},
+                      borderRadius: BorderRadius.circular(20),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.add, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -138,36 +194,54 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSearchBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search, color: AppColors.textTertiary, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Search for products or services...',
-                  style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
-                ),
-              ),
-              Icon(Icons.mic_none, color: AppColors.textTertiary, size: 22),
-            ],
-          ),
+  /// "Your Graphics" section: title with dropdown, 3 circular icon buttons.
+  Widget _yourGraphicsSection() {
+    const graphics = [
+      (label: 'Products', letter: 'P', color: Color(0xFF059669)),
+      (label: 'Services', letter: 'S', color: Color(0xFFEA580C)),
+      (label: 'Suppliers', letter: 'S', color: Color(0xFF2563EB)),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Your Graphics', style: AppTypography.textTheme.titleMedium),
+            Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 24),
+          ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: graphics.map((g) {
+            return Column(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: g.color.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      g.letter,
+                      style: TextStyle(
+                        color: g.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(g.label, style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 11)),
+              ],
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -287,148 +361,189 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _recommendedCard(RecommendedItem r) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(borderRadius: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openProductFromRecommended(r),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: AppDecorations.card(borderRadius: 14),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
+              AspectRatio(
+                aspectRatio: 1.5,
+                child: AppNetworkImage(imageUrl: r.imageUrl, fit: BoxFit.cover),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(r.title, style: AppTypography.textTheme.titleMedium),
-                    Text(r.supplierName, style: AppTypography.textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      r.priceDisplay,
+                      style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.folder_outlined, size: 18, color: AppColors.textTertiary),
+                        const SizedBox(width: 6),
+                        Icon(Icons.check_circle_outline, size: 18, color: AppColors.verified),
+                        const SizedBox(width: 6),
+                        Icon(Icons.star_rounded, size: 18, color: Colors.amber[700]),
+                        const SizedBox(width: 4),
+                        Text(r.rating, style: AppTypography.textTheme.labelMedium),
+                      ],
+                    ),
+                    if (r.descriptionSnippet.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        r.descriptionSnippet,
+                        style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(Icons.mail_outline, size: 20, color: AppColors.accent),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          tooltip: 'Enquiry',
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: Icon(Icons.call_outlined, size: 20, color: AppColors.verified),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          tooltip: 'Call',
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Row(
-                children: [
-                  Icon(Icons.star_rounded, size: 18, color: Colors.amber[700]),
-                  const SizedBox(width: 4),
-                  Text(r.rating, style: AppTypography.textTheme.labelMedium),
-                ],
-              ),
             ],
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              if (r.verified)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.successLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.verified, width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified, size: 14, color: AppColors.verified),
-                      const SizedBox(width: 4),
-                      Text('GST Verified', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.verified, fontSize: 11)),
-                    ],
-                  ),
-                ),
-              if (r.trustedSeller)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.accent, width: 1),
-                  ),
-                  child: Text('TrustSEAL / Verified Exporter', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.accent, fontSize: 10)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.location_on_outlined, size: 14, color: AppColors.textTertiary),
-              const SizedBox(width: 4),
-              Text(r.location, style: AppTypography.textTheme.bodySmall),
-              const SizedBox(width: 12),
-              Text(r.reviewCount, style: AppTypography.textTheme.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Starting from ${r.priceRange}', style: AppTypography.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.mail_outline, size: 22, color: AppColors.accent),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                tooltip: 'Enquiry',
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.call_outlined, size: 22, color: AppColors.verified),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                tooltip: 'Call',
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _continueCard(ContinueCategory c) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: AppDecorations.card(borderRadius: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(c.title, style: AppTypography.textTheme.titleSmall),
-          Text(c.subtitle, style: AppTypography.textTheme.bodySmall),
-          Text(c.sellerCount, style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.accent)),
-          const Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward_ios, size: 12)),
-        ],
+  void _openProductFromRecommended(RecommendedItem r) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductPage(
+          title: r.title,
+          imageUrl: r.imageUrl,
+          price: r.priceRange,
+          supplierName: r.supplierName,
+          description: r.descriptionSnippet,
+        ),
+      ),
+    );
+  }
+
+  static const _continueItems = [
+    (title: 'Web Development', pages: '2 Pages', progress: 0.5),
+    (title: 'Industrial Machinery', pages: '100+ Pages', progress: 0.15),
+    (title: 'Raw Materials', pages: '200+ Pages', progress: 0.45),
+  ];
+
+  Widget _continueWhereYouLeft(BuildContext context) {
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _continueItems.length,
+        itemBuilder: (context, i) {
+          final item = _continueItems[i];
+          return Container(
+            width: 180,
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: AppDecorations.card(borderRadius: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(item.title, style: AppTypography.textTheme.titleSmall),
+                Text(item.pages, style: AppTypography.textTheme.bodySmall),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: item.progress,
+                    backgroundColor: AppColors.surfaceVariant,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    minHeight: 6,
+                  ),
+                ),
+                Text(
+                  '${(item.progress * 100).round()}% Completed',
+                  style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.accent),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _quickFilters() {
     const filters = [
-      (Icons.star_rounded, 'Top Rated', Colors.amber),
-      (Icons.location_on_outlined, 'Local Sellers', AppColors.accent),
-      (Icons.verified, 'Verified', AppColors.verified),
-      (Icons.flash_on, 'Quick Response', AppColors.ctaOrange),
+      (Icons.star_rounded, 'Top Rated', Colors.amber, 1),
+      (Icons.location_on_outlined, 'Local Sellers', AppColors.accent, 2),
+      (Icons.verified, 'Verified', AppColors.verified, 1),
+      (Icons.flash_on, 'Quick Response', AppColors.ctaOrange, 3),
     ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(4, (i) {
-        final (icon, label, color) = filters[i];
+        final (icon, label, color, badge) = filters[i];
         final selected = _selectedQuickFilter == i;
         return GestureDetector(
           onTap: () => setState(() => _selectedQuickFilter = i),
           child: Column(
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: selected ? 0.25 : 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 26),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: selected ? 0.25 : 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 26),
+                  ),
+                  if (badge > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.ctaOrange,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$badge',
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(label, style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 11)),
@@ -581,6 +696,625 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _sendAIMessage(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return;
+    setState(() {
+      _aiMessages.add(_ChatMessage(isUser: true, text: t));
+      _aiChatController.clear();
+    });
+    _scrollAIToEnd();
+    // Demo reply after a short delay
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      setState(() {
+        _aiMessages.add(_ChatMessage(
+          isUser: false,
+          text: _demoAIResponse(t),
+        ));
+      });
+      _scrollAIToEnd();
+    });
+  }
+
+  void _scrollAIToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_aiScrollController.hasClients) {
+        _aiScrollController.animateTo(
+          _aiScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  String _demoAIResponse(String query) {
+    final q = query.toLowerCase();
+    if (q.contains('supplier') || q.contains('find') || q.contains('who')) {
+      return 'I can help you find suppliers. Try searching by product or category on the Home screen, or use "Get Instant Quotes" to request quotes from verified sellers.';
+    }
+    if (q.contains('quote') || q.contains('price')) {
+      return 'You can get instant quotes by tapping "Get Instant Quotes" on the Home screen or the Quotes tab. Describe your requirement and we\'ll connect you with verified sellers.';
+    }
+    if (q.contains('product') || q.contains('category')) {
+      return 'Browse by category on the Home screen to explore products. You can also use the search bar to find specific products and services.';
+    }
+    return 'Thanks for your message. I\'m your B2B assistant. I can help you find suppliers, get quotes, and explore categories. Try asking: "Find suppliers for machinery" or "How do I get a quote?"';
+  }
+
+  Widget _buildAIChatContent(BuildContext context) {
+    const suggestedPrompts = [
+      'Find suppliers for industrial machinery',
+      'Get quotes for raw materials',
+      'Compare products by category',
+      'How do I request a quote?',
+    ];
+    return SafeArea(
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            color: const Color(0xFF1D8480),
+            child: Row(
+              children: [
+                Icon(Icons.smart_toy_outlined, color: Colors.white, size: 26),
+                const SizedBox(width: 10),
+                Text(
+                  'AI Chat',
+                  style: AppTypography.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _aiMessages.isEmpty
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.headerTeal.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.smart_toy, size: 48, color: AppColors.headerTeal),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: Text(
+                            'How can I help you today?',
+                            style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            'Ask about suppliers, quotes, or products',
+                            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Text('Suggested prompts', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary)),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: suggestedPrompts.map((p) {
+                            return ActionChip(
+                              label: Text(p, style: AppTypography.textTheme.bodySmall),
+                              onPressed: () => _sendAIMessage(p),
+                              backgroundColor: AppColors.surfaceVariant,
+                              side: BorderSide(color: AppColors.border),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _aiScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    itemCount: _aiMessages.length,
+                    itemBuilder: (context, i) {
+                      final m = _aiMessages[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          mainAxisAlignment: m.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!m.isUser)
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.headerTeal.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.smart_toy, size: 18, color: AppColors.headerTeal),
+                              ),
+                            if (!m.isUser) const SizedBox(width: 10),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: m.isUser ? AppColors.headerTeal : AppColors.surfaceVariant,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(16),
+                                    topRight: const Radius.circular(16),
+                                    bottomLeft: Radius.circular(m.isUser ? 16 : 4),
+                                    bottomRight: Radius.circular(m.isUser ? 4 : 16),
+                                  ),
+                                ),
+                                child: Text(
+                                  m.text,
+                                  style: AppTypography.textTheme.bodyMedium?.copyWith(
+                                    color: m.isUser ? Colors.white : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (m.isUser) const SizedBox(width: 10),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, -2))],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _aiChatController,
+                    decoration: InputDecoration(
+                      hintText: 'Type your message...',
+                      hintStyle: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                      filled: true,
+                      fillColor: AppColors.surfaceVariant,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    maxLines: null,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: _sendAIMessage,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Material(
+                  color: AppColors.headerTeal,
+                  borderRadius: BorderRadius.circular(24),
+                  child: InkWell(
+                    onTap: () => _sendAIMessage(_aiChatController.text),
+                    borderRadius: BorderRadius.circular(24),
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Icon(Icons.send_rounded, color: Colors.white, size: 24),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Search listing: category selector; bicycle spare parts (grid) or paper making machine (photo prominent list).
+  Widget _buildSearchListingContent(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Row(
+              children: [
+                _searchCategoryChip(0, 'Bicycle spare parts'),
+                const SizedBox(width: 8),
+                _searchCategoryChip(1, 'Paper making machine'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _searchCategoryIndex == 0 ? _buildSearchGridBicycle() : _buildSearchListPaperMaking(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchCategoryChip(int index, String label) {
+    final selected = _searchCategoryIndex == index;
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (v) => setState(() => _searchCategoryIndex = index),
+      selectedColor: AppColors.headerTeal.withValues(alpha: 0.2),
+      checkmarkColor: AppColors.headerTeal,
+    );
+  }
+
+  Widget _buildSearchGridBicycle() {
+    final list = MockData.searchProductsBicycleSpareParts;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Text(
+            '${list.length} products found',
+            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.58,
+            ),
+            itemCount: list.length,
+            itemBuilder: (context, i) => _searchProductCard(list[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Paper making machine – photo important: large image, TrustSEAL badge, 3 ISQs, GST, Call + WhatsApp.
+  Widget _buildSearchListPaperMaking() {
+    final list = MockData.searchProductsPaperMakingMachine;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Text(
+            'Paper making machine · ${list.length} products found',
+            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            itemCount: list.length,
+            itemBuilder: (context, i) => _searchProductCardPhotoProminent(list[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Photo-prominent card: large image, TrustSEAL below, title, price, 3 ISQs, seller (GST, yrs, rating), Call + WhatsApp.
+  Widget _searchProductCardPhotoProminent(SearchProductItem p) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: AppDecorations.card(borderRadius: 16),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 1.35,
+            child: AppNetworkImage(imageUrl: p.imageUrl, fit: BoxFit.cover),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (p.trustedSeller)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.amber.shade700),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, size: 16, color: Colors.amber.shade800),
+                        const SizedBox(width: 6),
+                        Text('TrustSEAL', style: AppTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: p.isqs.take(3).map((isq) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(isq, style: AppTypography.textTheme.labelSmall),
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  p.title,
+                  style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  p.price,
+                  style: AppTypography.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(p.supplierName, style: AppTypography.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 8),
+                    if (p.verified)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, size: 16, color: AppColors.verified),
+                          const SizedBox(width: 4),
+                          Text('GST', style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.verified)),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 14, color: AppColors.textTertiary),
+                    const SizedBox(width: 4),
+                    Text(p.location, style: AppTypography.textTheme.bodySmall),
+                    const Spacer(),
+                    Icon(Icons.star_rounded, size: 16, color: Colors.amber[700]),
+                    const SizedBox(width: 4),
+                    Text('${p.rating} (278)', style: AppTypography.textTheme.bodySmall),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.phone, size: 20),
+                        label: const Text('Call'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.chat, size: 20),
+                        label: const Text('WhatsApp'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchProductCard(SearchProductItem p) {
+    return Container(
+      decoration: AppDecorations.card(borderRadius: 14),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Stack(
+            alignment: Alignment.topLeft,
+            children: [
+              AspectRatio(
+                aspectRatio: 1.1,
+                child: AppNetworkImage(imageUrl: p.imageUrl, fit: BoxFit.cover),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (p.verified)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text('GST Verified', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    if (p.trustedSeller) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text('TrustSEAL', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p.title,
+                  style: AppTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      p.price,
+                      style: AppTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('/${p.priceUnit}', style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: p.isqs.take(3).map((isq) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isq,
+                      style: AppTypography.textTheme.labelSmall?.copyWith(fontSize: 9),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )).toList(),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.supplierName,
+                        style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.star_rounded, size: 14, color: Colors.amber[700]),
+                    const SizedBox(width: 2),
+                    Text(p.rating, style: AppTypography.textTheme.labelSmall),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 12, color: AppColors.textTertiary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        p.location,
+                        style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {},
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.ctaOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.phone, size: 14),
+                            SizedBox(width: 4),
+                            Text('Call', style: TextStyle(fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {},
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.headerTeal,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          minimumSize: Size.zero,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.sell_outlined, size: 14),
+                            SizedBox(width: 4),
+                            Text('Best Price', style: TextStyle(fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTabPlaceholder(BuildContext context) {
     if (_selectedNavIndex == 4) {
       final isLoggedIn = currentUserName.value != null && currentUserName.value!.isNotEmpty;
@@ -687,12 +1421,22 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 24, color: selected ? AppColors.accent : AppColors.textTertiary),
+                      if (selected)
+                        Container(
+                          width: 24,
+                          height: 3,
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.headerTeal,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      Icon(icon, size: 24, color: selected ? AppColors.headerTeal : AppColors.textTertiary),
                       const SizedBox(height: 4),
                       Text(
                         label,
                         style: AppTypography.textTheme.labelMedium?.copyWith(
-                          color: selected ? AppColors.accent : AppColors.textTertiary,
+                          color: selected ? AppColors.headerTeal : AppColors.textTertiary,
                         ),
                       ),
                     ],

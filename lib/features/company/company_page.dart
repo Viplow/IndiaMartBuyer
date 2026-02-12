@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../data/models/company.dart';
 import 'widgets/company_gallery.dart';
 import 'widgets/company_hero.dart';
-import 'widgets/company_product_card.dart';
 import 'widgets/company_tabs.dart';
 
 class CompanyPage extends StatefulWidget {
@@ -65,14 +66,16 @@ class _CompanyPageState extends State<CompanyPage> {
       case 0:
         return _buildProducts(profile);
       case 1:
+        return _buildAbout(profile);
+      case 2:
+        return _buildCategoriesPlaceholder();
+      case 3:
         return CompanyGallery(
           imageUrls: profile.galleryUrls,
           onImageTap: (i) => _snack('Gallery image $i'),
         );
-      case 2:
-        return _buildAbout(profile);
-      case 3:
-        return _buildReviews();
+      case 4:
+        return _buildVideoPlaceholder();
       default:
         return const SizedBox.shrink();
     }
@@ -89,25 +92,118 @@ class _CompanyPageState extends State<CompanyPage> {
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      child: GridView.builder(
+      child: ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 0.78,
-        ),
         itemCount: profile.products.length,
         itemBuilder: (context, i) {
           final p = profile.products[i];
-          return CompanyProductCard(
-            product: p,
-            onTap: () => _snack(p.name),
-            onGetPrice: () => _snack('Get Best Price: ${p.name}'),
-          );
+          return _companyProductListCard(p);
         },
       ),
+    );
+  }
+
+  Widget _companyProductListCard(CompanyProduct p) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AppNetworkImage(
+                    imageUrl: p.imageUrl,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: AppTypography.textTheme.titleSmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        p.priceRange,
+                        style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600),
+                      ),
+                      if (p.specifications != null && p.specifications!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        ...p.specifications!.take(3).map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            '${e.key}: ${e.value}',
+                            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => _snack('Call Now: ${p.name}'),
+                    icon: const Icon(Icons.phone, size: 18),
+                    label: const Text('Call Now'),
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.accent, padding: const EdgeInsets.symmetric(vertical: 10)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _snack('Get Price: ${p.name}'),
+                    icon: Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.accent),
+                    label: Text('Get Price', style: TextStyle(color: AppColors.accent)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.accent), padding: const EdgeInsets.symmetric(vertical: 10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoriesPlaceholder() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(child: Text('Categories', style: AppTypography.textTheme.bodyLarge)),
+    );
+  }
+
+  Widget _buildVideoPlaceholder() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(child: Text('Video', style: AppTypography.textTheme.bodyLarge)),
     );
   }
 
@@ -130,14 +226,6 @@ class _CompanyPageState extends State<CompanyPage> {
     );
   }
 
-  Widget _buildReviews() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      child: Center(
-        child: Text('Reviews coming soon', style: AppTypography.textTheme.bodyLarge),
-      ),
-    );
-  }
 
   void _snack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -7,6 +7,9 @@ class CompanyProfile {
   final bool verified;
   final String yearsInBusiness;
   final String? rating;
+  final String? ratingCount; // e.g. "259"
+  final String? responseRate; // e.g. "74%"
+  final String? gstNumber;
   final List<String> certifications;
   final String location;
   final List<CompanyProduct> products;
@@ -22,6 +25,9 @@ class CompanyProfile {
     this.verified = false,
     required this.yearsInBusiness,
     this.rating,
+    this.ratingCount,
+    this.responseRate,
+    this.gstNumber,
     this.certifications = const [],
     required this.location,
     this.products = const [],
@@ -39,6 +45,9 @@ class CompanyProfile {
       verified: json['verified'] as bool? ?? false,
       yearsInBusiness: json['yearsInBusiness'] as String? ?? '',
       rating: json['rating'] as String?,
+      ratingCount: json['ratingCount'] as String?,
+      responseRate: json['responseRate'] as String?,
+      gstNumber: json['gstNumber'] as String?,
       certifications: (json['certifications'] as List?)?.cast<String>() ?? [],
       location: json['location'] as String? ?? '',
       products: (json['products'] as List?)
@@ -57,6 +66,7 @@ class CompanyProduct {
   final String imageUrl;
   final String priceRange;
   final String? moq;
+  final List<MapEntry<String, String>>? specifications;
 
   const CompanyProduct({
     required this.id,
@@ -64,6 +74,7 @@ class CompanyProduct {
     required this.imageUrl,
     required this.priceRange,
     this.moq,
+    this.specifications,
   });
 
   factory CompanyProduct.fromJson(Map<String, dynamic> json) {
@@ -73,6 +84,7 @@ class CompanyProduct {
       imageUrl: json['imageUrl'] as String? ?? '',
       priceRange: json['priceRange'] as String? ?? '',
       moq: json['moq'] as String?,
+      specifications: null,
     );
   }
 }

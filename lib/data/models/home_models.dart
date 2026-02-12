@@ -17,10 +17,12 @@ class EnquiryItem {
   });
 }
 
-/// Recommended card for "Recommended for You".
+/// Recommended card for "Recommended for You" (image-prevalent).
 class RecommendedItem {
   final String id;
   final String title;
+  final String imageUrl;
+  final String priceDisplay; // e.g. "10,000 / 12 Days"
   final String supplierName;
   final String rating;
   final bool verified;
@@ -29,10 +31,13 @@ class RecommendedItem {
   final String reviewCount;
   final String priceRange;
   final String responseTime;
+  final String descriptionSnippet;
 
   const RecommendedItem({
     required this.id,
     required this.title,
+    required this.imageUrl,
+    required this.priceDisplay,
     required this.supplierName,
     required this.rating,
     this.verified = true,
@@ -41,6 +46,7 @@ class RecommendedItem {
     required this.reviewCount,
     required this.priceRange,
     required this.responseTime,
+    this.descriptionSnippet = '',
   });
 }
 
@@ -84,5 +90,34 @@ class BrowseCategory {
     required this.id,
     required this.name,
     required this.iconKey,
+  });
+}
+
+/// Search listing product card (e.g. bicycle spare parts): image overlay badges + 3 ISQs.
+class SearchProductItem {
+  final String id;
+  final String title;
+  final String imageUrl;
+  final String price;
+  final String priceUnit; // e.g. "per piece", "per pair"
+  final List<String> isqs; // 3 Inquiry Short Questions, e.g. "Speed Compatibility: 6/7/8 Speed"
+  final String supplierName;
+  final String rating;
+  final String location;
+  final bool verified;
+  final bool trustedSeller;
+
+  const SearchProductItem({
+    required this.id,
+    required this.title,
+    required this.imageUrl,
+    required this.price,
+    required this.priceUnit,
+    required this.isqs,
+    required this.supplierName,
+    required this.rating,
+    required this.location,
+    this.verified = true,
+    this.trustedSeller = true,
   });
 }
