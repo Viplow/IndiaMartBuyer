@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IndiaMART Login Flow</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .animate-slide-up {
+      animation: slideUp 0.5s ease-out;
+    }
+    
+    .animate-scale-in {
+      animation: scaleIn 0.4s ease-out;
+    }
+    
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .category-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .category-card:hover {
+      transform: scale(1.05);
+    }
+    
+    .category-card.selected {
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Lucide Icons as React components
+    const ChevronRight = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    );
+
+    const MapPin = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+      </svg>
+    );
+
+    const Check = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    );
+
+    const Shield = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      </svg>
+    );
+
+    const Sparkles = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+        <path d="M5 3v4"></path>
+        <path d="M19 17v4"></path>
+        <path d="M3 5h4"></path>
+        <path d="M17 19h4"></path>
+      </svg>
+    );
+
+    const IndiaMArtLoginFlow = () => {
+      const [step, setStep] = useState('mobile');
+      const [mobile, setMobile] = useState('');
+      const [otp, setOtp] = useState(['', '', '', '']);
+      const [location, setLocation] = useState('');
+      const [selectedCategories, setSelectedCategories] = useState([]);
+      const [termsAccepted, setTermsAccepted] = useState(false);
+      const [isReturningUser, setIsReturningUser] = useState(false);
+      const [timer, setTimer] = useState(55);
+      const [error, setError] = useState('');
+      
+      const otpInputRefs = [useRef(), useRef(), useRef(), useRef()];
+
+      const categories = [
+        { id: 1, name: 'Electronics & Electrical', icon: '⚡', gradient: 'from-amber-400 to-orange-500' },
+        { id: 2, name: 'Building & Construction', icon: '🏗️', gradient: 'from-slate-400 to-slate-600' },
+        { id: 3, name: 'Industrial Plants & Machinery', icon: '⚙️', gradient: 'from-blue-400 to-indigo-600' },
+        { id: 4, name: 'Apparel & Garments', icon: '👔', gradient: 'from-pink-400 to-rose-500' },
+        { id: 5, name: 'Chemicals & Pharmaceuticals', icon: '🧪', gradient: 'from-green-400 to-emerald-600' },
+        { id: 6, name: 'Food & Agriculture', icon: '🌾', gradient: 'from-lime-400 to-green-500' },
+        { id: 7, name: 'Packaging & Printing', icon: '📦', gradient: 'from-purple-400 to-violet-600' },
+        { id: 8, name: 'Home & Furniture', icon: '🛋️', gradient: 'from-cyan-400 to-blue-500' },
+        { id: 9, name: 'Automotive Parts', icon: '🚗', gradient: 'from-red-400 to-rose-600' },
+        { id: 10, name: 'Personal Care & Beauty', icon: '💄', gradient: 'from-fuchsia-400 to-pink-500' },
+        { id: 11, name: 'Office & Stationery', icon: '📎', gradient: 'from-teal-400 to-cyan-600' },
+        { id: 12, name: 'Sports & Entertainment', icon: '⚽', gradient: 'from-orange-400 to-red-500' }
+      ];
+
+      useEffect(() => {
+        if (step === 'otp' && timer > 0) {
+          const interval = setInterval(() => setTimer(t => t - 1), 1000);
+          return () => clearInterval(interval);
+        }
+      }, [step, timer]);
+
+      const handleMobileSubmit = (e) => {
+        e.preventDefault();
+        setError('');
+        if (mobile.length === 10 && termsAccepted) {
+          const isReturning = Math.random() > 0.5;
+          setIsReturningUser(isReturning);
+          setStep('otp');
+          setTimer(55);
+        }
+      };
+
+      const handleOtpChange = (index, value) => {
+        if (value.length <= 1 && /^\d*$/.test(value)) {
+          const newOtp = [...otp];
+          newOtp[index] = value;
+          setOtp(newOtp);
+          
+          if (value && index < 3) {
+            otpInputRefs[index + 1].current?.focus();
+          }
+        }
+      };
+
+      const handleOtpKeyDown = (index, e) => {
+        if (e.key === 'Backspace' && !otp[index] && index > 0) {
+          otpInputRefs[index - 1].current?.focus();
+        }
+      };
+
+      const handleOtpSubmit = (e) => {
+        e.preventDefault();
+        const otpValue = otp.join('');
+        if (otpValue.length === 4) {
+          if (otpValue === '1234') {
+            setError('');
+            if (isReturningUser) {
+              setStep('success');
+            } else {
+              setStep('location');
+            }
+          } else {
+            setError('Invalid OTP! For demo, please use: 1234');
+          }
+        }
+      };
+
+      const handleLocationSubmit = (e) => {
+        e.preventDefault();
+        if (location.trim()) {
+          setStep('categories');
+        }
+      };
+
+      const toggleCategory = (categoryId) => {
+        setSelectedCategories(prev => 
+          prev.includes(categoryId) 
+            ? prev.filter(id => id !== categoryId)
+            : [...prev, categoryId]
+        );
+      };
+
+      const handleCategoriesSubmit = (e) => {
+        e.preventDefault();
+        if (selectedCategories.length > 0) {
+          setStep('success');
+        }
+      };
+
+      const getCurrentLocation = () => {
+        setLocation('New Delhi, Delhi');
+      };
+
+      const resetDemo = () => {
+        setStep('mobile');
+        setMobile('');
+        setOtp(['', '', '', '']);
+        setLocation('');
+        setSelectedCategories([]);
+        setTermsAccepted(false);
+        setError('');
+      };
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8 animate-fade-in">
+              <div className="inline-flex items-center gap-2 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-2xl font-bold" style={{fontFamily: 'Space Grotesk'}}>IM</span>
+                </div>
+                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent" style={{fontFamily: 'Space Grotesk'}}>
+                  IndiaMART
+                </span>
+              </div>
+              <p className="text-gray-600 text-sm">India's Largest B2B Marketplace</p>
+            </div>
+
+            {step === 'mobile' && (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 card-hover animate-slide-up">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Space Grotesk'}}>
+                    Welcome Back!
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Enter your mobile number to get started
+                  </p>
+                </div>
+
+                <form onSubmit={handleMobileSubmit}>
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Mobile Number
+                    </label>
+                    <div className="flex gap-3">
+                      <div className="w-16 px-4 py-3 bg-gray-100 rounded-xl flex items-center justify-center font-semibold text-gray-700">
+                        +91
+                      </div>
+                      <input
+                        type="tel"
+                        maxLength="10"
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter 10 digit number"
+                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-0.5"
+                      />
+                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                        I accept all the{' '}
+                        <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold">
+                          terms and privacy policy
+                        </a>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-6 p-3 bg-blue-50 rounded-xl">
+                    <Shield />
+                    <p className="text-xs text-blue-900">
+                      Your details are safe with us
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={mobile.length !== 10 || !termsAccepted}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                  >
+                    Continue
+                    <ChevronRight />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {step === 'otp' && (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 card-hover animate-slide-up">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Space Grotesk'}}>
+                    Verify OTP
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    We've sent a code to <span className="font-semibold text-gray-900">+91-{mobile}</span>
+                  </p>
+                  <button 
+                    onClick={() => setStep('mobile')}
+                    className="text-blue-600 text-sm font-semibold hover:text-blue-700 mt-1"
+                  >
+                    Change number?
+                  </button>
+                  <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-800">
+                      💡 <strong>Demo Mode:</strong> Use OTP <span className="font-mono font-bold">1234</span> to continue
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleOtpSubmit}>
+                  <div className="mb-6">
+                    <div className="flex gap-3 justify-center">
+                      {otp.map((digit, index) => (
+                        <input
+                          key={index}
+                          ref={otpInputRefs[index]}
+                          type="text"
+                          maxLength="1"
+                          value={digit}
+                          onChange={(e) => handleOtpChange(index, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                          className="w-16 h-16 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl transition-all"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 text-center">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="mb-6 text-center">
+                    {timer > 0 ? (
+                      <p className="text-sm text-gray-600">
+                        Resend OTP in <span className="font-semibold text-blue-600">{timer}s</span>
+                      </p>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => setTimer(55)}
+                        className="text-sm text-blue-600 font-semibold hover:text-blue-700"
+                      >
+                        Resend OTP
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('mobile');
+                        setOtp(['', '', '', '']);
+                        setError('');
+                      }}
+                      className="flex-1 py-4 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={otp.join('').length !== 4}
+                      className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                    >
+                      Verify
+                      <ChevronRight />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {step === 'location' && (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 card-hover animate-slide-up">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Space Grotesk'}}>
+                    Select Your Location
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Help us show you relevant suppliers near you
+                  </p>
+                </div>
+
+                <form onSubmit={handleLocationSubmit}>
+                  <div className="mb-4">
+                    <button
+                      type="button"
+                      onClick={getCurrentLocation}
+                      className="w-full py-4 border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-all flex items-center justify-center gap-2 mb-4"
+                    >
+                      <MapPin />
+                      Use Current Location
+                    </button>
+                    
+                    <div className="text-center text-gray-500 text-sm mb-4">OR</div>
+                    
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Enter your city or pincode"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!location.trim()}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 mt-6"
+                  >
+                    Continue
+                    <ChevronRight />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {step === 'categories' && (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 card-hover animate-slide-up max-h-[90vh] overflow-y-auto">
+                <div className="mb-6 sticky top-0 bg-white pb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: 'Space Grotesk'}}>
+                    What interests you?
+                  </h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Select categories to personalize your experience
+                  </p>
+                  {selectedCategories.length > 0 && (
+                    <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm text-blue-900 inline-flex items-center gap-2">
+                      <Check />
+                      {selectedCategories.length} selected
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleCategoriesSubmit}>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        onClick={() => toggleCategory(category.id)}
+                        className={`category-card p-4 border-2 rounded-xl ${
+                          selectedCategories.includes(category.id)
+                            ? 'selected border-blue-600 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 bg-gradient-to-br ${category.gradient} rounded-xl flex items-center justify-center text-2xl mb-3`}>
+                          {category.icon}
+                        </div>
+                        <h3 className="font-semibold text-sm text-gray-900 leading-tight">
+                          {category.name}
+                        </h3>
+                        {selectedCategories.includes(category.id) && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center animate-scale-in">
+                            <Check />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={selectedCategories.length === 0}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 sticky bottom-0"
+                  >
+                    Get Started
+                    <ChevronRight />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {step === 'success' && (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 card-hover animate-scale-in text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full mx-auto mb-6 flex items-center justify-center animate-scale-in">
+                  <Check />
+                </div>
+                
+                <h2 className="text-3xl font-bold text-gray-900 mb-3" style={{fontFamily: 'Space Grotesk'}}>
+                  {isReturningUser ? 'Welcome Back!' : 'All Set! 🎉'}
+                </h2>
+                
+                <p className="text-gray-600 mb-8">
+                  {isReturningUser 
+                    ? "You've successfully signed in to IndiaMART"
+                    : "Your account is ready. Let's find what you need!"
+                  }
+                </p>
+
+                {!isReturningUser && selectedCategories.length > 0 && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-xl">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <Sparkles />
+                      <span className="font-semibold text-blue-900">Your Interests</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {selectedCategories.map(catId => {
+                        const cat = categories.find(c => c.id === catId);
+                        return (
+                          <span key={catId} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-blue-200">
+                            {cat.icon} {cat.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={resetDemo}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/30"
+                >
+                  Start Exploring
+                </button>
+              </div>
+            )}
+
+            {!isReturningUser && step !== 'mobile' && step !== 'success' && (
+              <div className="mt-6 flex justify-center gap-2 animate-fade-in">
+                <div className={`h-2 w-2 rounded-full transition-all ${step === 'otp' ? 'bg-blue-600 w-8' : 'bg-gray-300'}`} />
+                <div className={`h-2 w-2 rounded-full transition-all ${step === 'location' ? 'bg-blue-600 w-8' : 'bg-gray-300'}`} />
+                <div className={`h-2 w-2 rounded-full transition-all ${step === 'categories' ? 'bg-blue-600 w-8' : 'bg-gray-300'}`} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<IndiaMArtLoginFlow />, document.getElementById('root'));
+  </script>
+</body>
+</html>

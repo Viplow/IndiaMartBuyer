@@ -1,0 +1,7 @@
+{
+  "type": "ListingScreen",
+  "attributes": {
+    "skeleton": false,
+    "empty": false
+  }
+}
