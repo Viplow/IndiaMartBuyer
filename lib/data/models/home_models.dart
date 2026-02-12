@@ -23,6 +23,7 @@ class RecommendedItem {
   final String title;
   final String imageUrl;
   final String priceDisplay; // e.g. "10,000 / 12 Days"
+  final String price; // single price for card display, e.g. "₹25,000"
   final String supplierName;
   final String rating;
   final bool verified;
@@ -38,6 +39,7 @@ class RecommendedItem {
     required this.title,
     required this.imageUrl,
     required this.priceDisplay,
+    required this.price,
     required this.supplierName,
     required this.rating,
     this.verified = true,
@@ -119,5 +121,34 @@ class SearchProductItem {
     required this.location,
     this.verified = true,
     this.trustedSeller = true,
+  });
+}
+
+/// Search listing service card (photo not important): title, rating, provider, description, badges, location, price.
+class SearchServiceItem {
+  final String id;
+  final String title;
+  final String rating;
+  final String providerName;
+  final String descriptionSnippet;
+  final bool verified;
+  final bool trustedSeller;
+  final String experience; // e.g. "8+ years"
+  final String location;
+  final String priceLabel; // e.g. "Starting from"
+  final String priceRange; // e.g. "₹35,000 - ₹5,00,000"
+
+  const SearchServiceItem({
+    required this.id,
+    required this.title,
+    required this.rating,
+    required this.providerName,
+    required this.descriptionSnippet,
+    this.verified = true,
+    this.trustedSeller = true,
+    required this.experience,
+    required this.location,
+    required this.priceLabel,
+    required this.priceRange,
   });
 }

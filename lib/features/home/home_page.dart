@@ -34,7 +34,8 @@ class _ChatMessage {
 class _HomePageState extends State<HomePage> {
   int _selectedNavIndex = 0;
   int _selectedQuickFilter = 0;
-  int _searchCategoryIndex = 0; // 0 = Bicycle spare parts, 1 = Paper making machine
+  // Search: 0 = Paper making machine (default), 1 = Bicycle spare parts (photo med), 2 = Services (photo not important)
+  int _searchMode = 0;
   final _aiChatController = TextEditingController();
   final List<_ChatMessage> _aiMessages = [];
   final _aiScrollController = ScrollController();
@@ -84,25 +85,19 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              _yourGraphicsSection(),
-              const SizedBox(height: 24),
               _sectionHeader('Your Enquiries', 'View All →', onViewAll: () {}),
-              ...MockData.enquiries.map((e) => _enquiryCard(e)),
-              const SizedBox(height: 24),
-              _sectionHeader('Recommended for You', 'See All →', onViewAll: () {}),
-              ...MockData.recommended.map((r) => _recommendedCard(r)),
+              _enquiriesConsolidatedCard(context),
               const SizedBox(height: 24),
               _sectionHeaderWithIcon(Icons.refresh, 'Continue Where You Left'),
               const SizedBox(height: 12),
               _continueWhereYouLeft(context),
               const SizedBox(height: 24),
+              _sectionHeader('Recommended for You', 'See All →', onViewAll: () {}),
+              ...MockData.recommended.map((r) => _recommendedCard(r)),
+              const SizedBox(height: 24),
               _sectionHeaderWithIcon(Icons.tune, 'Quick Filters'),
               const SizedBox(height: 12),
               _quickFilters(),
-              const SizedBox(height: 24),
-              _sectionHeaderWithIcon(Icons.trending_up, 'Trending Now'),
-              const SizedBox(height: 12),
-              ...MockData.trending.map((t) => _trendingRow(t)),
               const SizedBox(height: 24),
               _sectionHeader('Browse by Category', 'View All →', onViewAll: () {}),
               const SizedBox(height: 12),
@@ -194,57 +189,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// "Your Graphics" section: title with dropdown, 3 circular icon buttons.
-  Widget _yourGraphicsSection() {
-    const graphics = [
-      (label: 'Products', letter: 'P', color: Color(0xFF059669)),
-      (label: 'Services', letter: 'S', color: Color(0xFFEA580C)),
-      (label: 'Suppliers', letter: 'S', color: Color(0xFF2563EB)),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Your Graphics', style: AppTypography.textTheme.titleMedium),
-            Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 24),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: graphics.map((g) {
-            return Column(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: g.color.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      g.letter,
-                      style: TextStyle(
-                        color: g.color,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(g.label, style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 11)),
-              ],
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   Widget _sectionHeader(String title, String action, {VoidCallback? onViewAll}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -290,73 +234,61 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _enquiryCard(EnquiryItem e) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: AppDecorations.card(borderRadius: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: _statusColor(e.statusColor).withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                e.supplierName.isNotEmpty ? e.supplierName[0] : '?',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: _statusColor(e.statusColor),
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(e.title, style: AppTypography.textTheme.titleSmall),
-                Text(e.supplierName, style: AppTypography.textTheme.bodySmall),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+  /// Consolidated "Your Enquiries" card: Active / Pending / Viewed with counts and arrow.
+  Widget _enquiriesConsolidatedCard(BuildContext context) {
+    final list = MockData.enquiries;
+    final activeCount = list.where((e) => e.status == 'Responded').length;
+    final pendingCount = list.where((e) => e.status == 'Pending').length;
+    final viewedCount = list.where((e) => e.status == 'Viewed').length;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {}, // Navigate to enquiries list when needed
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          decoration: AppDecorations.card(borderRadius: 14),
+          child: Row(
             children: [
-              Text(
-                e.status,
-                style: AppTypography.textTheme.labelMedium?.copyWith(color: _statusColor(e.statusColor)),
-              ),
-              Text(e.timeAgo, style: AppTypography.textTheme.bodySmall),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.mail_outline, size: 18, color: AppColors.accent),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    tooltip: 'Enquiry',
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.call_outlined, size: 18, color: AppColors.verified),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    tooltip: 'Call',
-                  ),
-                ],
-              ),
+              _enquiryStatusChip(context, activeCount, 'Active', Colors.green),
+              const SizedBox(width: 24),
+              _enquiryStatusChip(context, pendingCount, 'Pending', Colors.orange),
+              const SizedBox(width: 24),
+              _enquiryStatusChip(context, viewedCount, 'Viewed', AppColors.accent),
+              const Spacer(),
+              Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textTertiary),
             ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _enquiryStatusChip(BuildContext context, int count, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$count',
+              style: AppTypography.textTheme.labelMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
@@ -385,7 +317,7 @@ class _HomePageState extends State<HomePage> {
                     Text(r.title, style: AppTypography.textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(
-                      r.priceDisplay,
+                      r.price,
                       style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 10),
@@ -453,48 +385,83 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  static const _continueItems = [
-    (title: 'Web Development', pages: '2 Pages', progress: 0.5),
-    (title: 'Industrial Machinery', pages: '100+ Pages', progress: 0.15),
-    (title: 'Raw Materials', pages: '200+ Pages', progress: 0.45),
+  /// Product-style items for "Continue Where You Left" (image, price, clickable → ProductPage).
+  static final _continueProductItems = [
+    (title: 'CNC Milling Machine', imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400', price: '₹12,50,000', supplierName: 'Precision Tools Ltd', description: 'Industrial 5-axis CNC milling machine for metal and composite machining.'),
+    (title: 'Industrial Pump Set', imageUrl: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400', price: '₹45,000 - ₹1,20,000', supplierName: 'FlowTech Engineers', description: 'Heavy-duty pump sets for water and chemical handling.'),
+    (title: 'Raw Material - Steel Coils', imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400', price: '₹85/kg', supplierName: 'Metals & Alloys Corp', description: 'Cold-rolled steel coils, various gauges.'),
   ];
 
   Widget _continueWhereYouLeft(BuildContext context) {
     return SizedBox(
-      height: 120,
+      height: 218,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _continueItems.length,
+        itemCount: _continueProductItems.length,
         itemBuilder: (context, i) {
-          final item = _continueItems[i];
-          return Container(
-            width: 180,
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: AppDecorations.card(borderRadius: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(item.title, style: AppTypography.textTheme.titleSmall),
-                Text(item.pages, style: AppTypography.textTheme.bodySmall),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: item.progress,
-                    backgroundColor: AppColors.surfaceVariant,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
-                    minHeight: 6,
-                  ),
-                ),
-                Text(
-                  '${(item.progress * 100).round()}% Completed',
-                  style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.accent),
-                ),
-              ],
+          final item = _continueProductItems[i];
+          return _continueProductCard(context, item);
+        },
+      ),
+    );
+  }
+
+  Widget _continueProductCard(BuildContext context, ({String title, String imageUrl, String price, String supplierName, String description}) item) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProductPage(
+                title: item.title,
+                imageUrl: item.imageUrl,
+                price: item.price,
+                supplierName: item.supplierName,
+                description: item.description,
+              ),
             ),
           );
         },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 168,
+          margin: const EdgeInsets.only(right: 14),
+          decoration: AppDecorations.card(borderRadius: 14),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AspectRatio(
+                aspectRatio: 1.1,
+                child: AppNetworkImage(imageUrl: item.imageUrl, fit: BoxFit.cover),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.title,
+                      style: AppTypography.textTheme.titleSmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.price,
+                      style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -503,12 +470,11 @@ class _HomePageState extends State<HomePage> {
     const filters = [
       (Icons.star_rounded, 'Top Rated', Colors.amber, 1),
       (Icons.location_on_outlined, 'Local Sellers', AppColors.accent, 2),
-      (Icons.verified, 'Verified', AppColors.verified, 1),
-      (Icons.flash_on, 'Quick Response', AppColors.ctaOrange, 3),
+      (Icons.verified, 'GST Verified', AppColors.verified, 1),
     ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(4, (i) {
+      children: List.generate(3, (i) {
         final (icon, label, color, badge) = filters[i];
         final selected = _selectedQuickFilter == i;
         return GestureDetector(
@@ -551,30 +517,6 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       }),
-    );
-  }
-
-  Widget _trendingRow(TrendingItem t) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: AppColors.chipBackground,
-              shape: BoxShape.circle,
-            ),
-            child: Center(child: Text('${t.rank}', style: AppTypography.textTheme.labelMedium)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(t.name, style: AppTypography.textTheme.bodyMedium)),
-          Text(t.sellerCount, style: AppTypography.textTheme.bodySmall),
-          const SizedBox(width: 8),
-          Text(t.growthPercent, style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.verified)),
-        ],
-      ),
     );
   }
 
@@ -919,38 +861,125 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Search listing: category selector; bicycle spare parts (grid) or paper making machine (photo prominent list).
+  static const String _searchDefaultQuery = 'Paper making machine';
+
+  String get _searchBarLabel {
+    switch (_searchMode) {
+      case 0:
+        return _searchDefaultQuery;
+      case 1:
+        return 'Bicycle spare parts';
+      case 2:
+        return 'Services';
+      default:
+        return _searchDefaultQuery;
+    }
+  }
+
+  /// Search listing: search bar on top (default "Paper making machine"); on tap show Bicycles / Services options.
   Widget _buildSearchListingContent(BuildContext context) {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Row(
-              children: [
-                _searchCategoryChip(0, 'Bicycle spare parts'),
-                const SizedBox(width: 8),
-                _searchCategoryChip(1, 'Paper making machine'),
-              ],
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: InkWell(
+                onTap: () => _showSearchOptions(context),
+                borderRadius: BorderRadius.circular(14),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: AppColors.textTertiary, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _searchBarLabel,
+                        style: AppTypography.textTheme.bodyLarge?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.keyboard_arrow_down, color: AppColors.textTertiary, size: 24),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
-            child: _searchCategoryIndex == 0 ? _buildSearchGridBicycle() : _buildSearchListPaperMaking(),
+            child: _searchMode == 0
+                ? _buildSearchListPaperMaking()
+                : _searchMode == 1
+                    ? _buildSearchGridBicycle()
+                    : _buildSearchListServices(),
           ),
         ],
       ),
     );
   }
 
-  Widget _searchCategoryChip(int index, String label) {
-    final selected = _searchCategoryIndex == index;
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (v) => setState(() => _searchCategoryIndex = index),
-      selectedColor: AppColors.headerTeal.withValues(alpha: 0.2),
-      checkmarkColor: AppColors.headerTeal,
+  void _showSearchOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Search type',
+                style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.photo_library_outlined, color: AppColors.headerTeal),
+                title: const Text('Bicycle spare parts'),
+                subtitle: Text('Photo medium important', style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _searchMode = 1);
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.description_outlined, color: AppColors.headerTeal),
+                title: const Text('Services'),
+                subtitle: Text('Photo not important', style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _searchMode = 2);
+                },
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() => _searchMode = 0);
+                },
+                child: const Text('Default: Paper making machine'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -980,6 +1009,169 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Services – photo not important: text-only cards (title, rating, provider, description, badges, location, price).
+  Widget _buildSearchListServices() {
+    final list = MockData.searchServices;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Text(
+            '${list.length} services found',
+            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            itemCount: list.length,
+            itemBuilder: (context, i) => _searchServiceCard(list[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchServiceCard(SearchServiceItem s) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: AppDecorations.card(borderRadius: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  s.title,
+                  style: AppTypography.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star_rounded, size: 16, color: Colors.amber.shade700),
+                    const SizedBox(width: 4),
+                    Text(s.rating, style: AppTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.business_outlined, size: 16, color: AppColors.textTertiary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  s.providerName,
+                  style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            s.descriptionSnippet,
+            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (s.verified)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified, size: 14, color: Colors.green.shade700),
+                      const SizedBox(width: 4),
+                      Text('GST Verified', style: AppTypography.textTheme.labelSmall?.copyWith(color: Colors.green.shade800)),
+                    ],
+                  ),
+                ),
+              if (s.trustedSeller)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Text('TrustSEAL', style: AppTypography.textTheme.labelSmall?.copyWith(color: Colors.blue.shade800)),
+                ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                ),
+                child: Text(s.experience, style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.textTertiary.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 16, color: AppColors.textTertiary),
+              const SizedBox(width: 4),
+              Text(s.location, style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    s.priceLabel,
+                    style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.textTertiary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    s.priceRange,
+                    style: AppTypography.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1263,45 +1455,33 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
+                      child: FilledButton.icon(
                         onPressed: () {},
+                        icon: const Icon(Icons.phone, size: 16),
+                        label: const Text('Call', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.ctaOrange,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           minimumSize: Size.zero,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.phone, size: 14),
-                            SizedBox(width: 4),
-                            Text('Call', style: TextStyle(fontSize: 11)),
-                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: FilledButton(
+                      child: FilledButton.icon(
                         onPressed: () {},
+                        icon: const Icon(Icons.local_offer_outlined, size: 16),
+                        label: const Text('Best Price', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.headerTeal,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           minimumSize: Size.zero,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.sell_outlined, size: 14),
-                            SizedBox(width: 4),
-                            Text('Best Price', style: TextStyle(fontSize: 11)),
-                          ],
                         ),
                       ),
                     ),

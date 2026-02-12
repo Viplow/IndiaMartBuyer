@@ -20,9 +20,11 @@ class _SignInPageState extends State<SignInPage> {
   final _mobileController = TextEditingController();
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _locationController = TextEditingController();
-  final _locationFocusNode = FocusNode();
   final _searchController = TextEditingController();
+  String? _selectedCity; // dropdown selection
   static const _cities = [
     'Mumbai', 'Delhi', 'New Delhi', 'Bangalore', 'Bengaluru', 'Chennai', 'Hyderabad', 'Kolkata', 'Pune',
     'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam',
@@ -30,21 +32,6 @@ class _SignInPageState extends State<SignInPage> {
     'Srinagar', 'Aurangabad', 'Dhanbad', 'Amritsar', 'Allahabad', 'Ranchi', 'Howrah', 'Coimbatore', 'Jabalpur',
     'Gwalior', 'Vijayawada', 'Jodhpur', 'Madurai', 'Raipur', 'Kota', 'Guwahati', 'Chandigarh', 'Solapur', 'Tiruchirappalli',
   ];
-  static const _pincodeToArea = {
-    '110001': 'Connaught Place, New Delhi',
-    '110002': 'Daryaganj, New Delhi',
-    '110003': 'Barakhamba, New Delhi',
-    '400001': 'Fort, Mumbai',
-    '400002': 'Crawford Market, Mumbai',
-    '560001': 'Bangalore GPO, Bengaluru',
-    '560002': 'Bangalore Cantonment, Bengaluru',
-    '600001': 'Parrys, Chennai',
-    '500001': 'Abids, Hyderabad',
-    '700001': 'BBD Bag, Kolkata',
-    '411001': 'Shivajinagar, Pune',
-    '380001': 'Kalupur, Ahmedabad',
-  };
-  String? _resolvedAreaFromPincode; // shown below field when pincode is entered
   final _categorySearchController = TextEditingController();
   final List<int> _selectedCategories = [];
   bool _termsAccepted = false;
@@ -68,7 +55,8 @@ class _SignInPageState extends State<SignInPage> {
     for (final f in _otpFocusNodes) {
       f.dispose();
     }
-    _locationFocusNode.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
     _locationController.dispose();
     _searchController.dispose();
     _categorySearchController.dispose();
@@ -98,7 +86,11 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   void _submitLocation() {
-    if (_locationController.text.trim().isNotEmpty) _next('categories');
+    if (_selectedCity != null && _selectedCity!.isNotEmpty) {
+      final name = _nameController.text.trim();
+      if (name.isNotEmpty) _displayName = name;
+      _next('categories');
+    }
   }
 
   void _toggleCategory(int i) {
@@ -332,32 +324,7 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  void _onLocationFieldChanged(String value) {
-    final query = value.trim();
-    if (query.length == 6 && RegExp(r'^\d+$').hasMatch(query)) {
-      final area = _pincodeToArea[query];
-      if (area != null) {
-        _resolvedAreaFromPincode = area;
-        _locationController.text = area;
-        _locationController.selection = TextSelection.collapsed(offset: area.length);
-      } else {
-        _resolvedAreaFromPincode = null;
-      }
-    } else {
-      if (query != _resolvedAreaFromPincode) _resolvedAreaFromPincode = null;
-    }
-    setState(() {});
-  }
-
-  List<String> _getCitySuggestions() {
-    final query = _locationController.text.trim().toLowerCase();
-    if (query.isEmpty || _resolvedAreaFromPincode != null) return [];
-    if (query.length == 6 && RegExp(r'^\d+$').hasMatch(query)) return [];
-    return _cities.where((c) => c.toLowerCase().contains(query)).take(8).toList();
-  }
-
   Widget _buildLocationStep() {
-    final citySuggestions = _getCitySuggestions();
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [
@@ -370,11 +337,35 @@ class _SignInPageState extends State<SignInPage> {
           const SizedBox(height: 4),
           Text('Help us show you relevant suppliers near you', style: AppTypography.textTheme.bodyMedium),
           const SizedBox(height: 20),
+          // Name (optional)
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: 'Name (optional)',
+              hintText: 'Enter your name',
+              border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              prefixIcon: const Icon(Icons.person_outline, size: 22),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Email (optional)
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Email (optional)',
+              hintText: 'Enter your email',
+              border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              prefixIcon: const Icon(Icons.email_outlined, size: 22),
+            ),
+          ),
+          const SizedBox(height: 20),
           OutlinedButton.icon(
             onPressed: () {
-              _resolvedAreaFromPincode = null;
-              _locationController.text = 'New Delhi, Delhi';
-              setState(() {});
+              setState(() {
+                _selectedCity = 'New Delhi';
+                _locationController.text = 'New Delhi, Delhi';
+              });
             },
             icon: const Icon(Icons.my_location),
             label: const Text('Auto detect location'),
@@ -383,63 +374,28 @@ class _SignInPageState extends State<SignInPage> {
           const SizedBox(height: 16),
           const Center(child: Text('OR')),
           const SizedBox(height: 16),
-          TextField(
-            controller: _locationController,
-            focusNode: _locationFocusNode,
-            onChanged: _onLocationFieldChanged,
+          // City dropdown (on click opens list; show ~4 items, rest scrollable)
+          DropdownButtonFormField<String>(
+            value: _selectedCity,
+            menuMaxHeight: 220,
             decoration: const InputDecoration(
-              hintText: 'Enter city or pincode',
+              labelText: 'City',
               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               prefixIcon: Icon(Icons.location_on_outlined, size: 22),
             ),
+            hint: const Text('Select city'),
+            isExpanded: true,
+            items: _cities.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedCity = value;
+                _locationController.text = value ?? '';
+              });
+            },
           ),
-          if (_resolvedAreaFromPincode != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Area: $_resolvedAreaFromPincode',
-              style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.accent),
-            ),
-          ],
-          if (citySuggestions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              constraints: const BoxConstraints(maxHeight: 220),
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: citySuggestions.length,
-                itemBuilder: (context, index) {
-                  final city = citySuggestions[index];
-                  return InkWell(
-                    onTap: () {
-                      _resolvedAreaFromPincode = null;
-                      _locationController.text = city;
-                      _locationController.selection = TextSelection.collapsed(offset: city.length);
-                      setState(() {});
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_city, size: 20, color: AppColors.textSecondary),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(city, style: AppTypography.textTheme.bodyMedium)),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: _locationController.text.trim().isNotEmpty ? _submitLocation : null,
+            onPressed: _selectedCity != null && _selectedCity!.isNotEmpty ? _submitLocation : null,
             style: FilledButton.styleFrom(backgroundColor: AppColors.accent, padding: const EdgeInsets.symmetric(vertical: 16)),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
