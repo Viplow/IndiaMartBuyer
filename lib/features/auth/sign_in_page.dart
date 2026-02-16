@@ -142,7 +142,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget _buildLogo() {
     return Column(
       children: [
-        const IndiamartLogo(height: 80, forDarkBackground: false),
+        const IndiamartLogo(height: 72, forDarkBackground: false),
         const SizedBox(height: 4),
         Text("India's Largest B2B Marketplace", style: AppTypography.textTheme.bodySmall),
       ],

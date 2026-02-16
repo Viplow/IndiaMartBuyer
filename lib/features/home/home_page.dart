@@ -127,86 +127,86 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: MediaQuery.of(context).padding.top + 16,
-          bottom: 16,
+          left: 12,
+          right: 8,
+          top: MediaQuery.of(context).padding.top + 10,
+          bottom: 10,
         ),
         color: const Color(0xFF1D8480),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                const IndiamartLogo(height: 48, forDarkBackground: true),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ListingPage(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search, color: AppColors.textTertiary, size: 22),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Search for products & services',
-                          style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+            const IndiamartLogo(height: 36, forDarkBackground: true),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ListingPage()),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ListingPage()),
-                          );
-                        },
-                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textTertiary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                        tooltip: 'Search by image',
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ListingPage()),
-                          );
-                        },
-                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textTertiary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                        tooltip: 'Voice search',
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search, color: AppColors.textTertiary, size: 20),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Search for products & services',
+                            style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ListingPage()),
+                            );
+                          },
+                          icon: Icon(Icons.camera_alt_outlined, color: AppColors.textTertiary, size: 20),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          tooltip: 'Search by image',
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ListingPage()),
+                            );
+                          },
+                          icon: Icon(Icons.mic_none_outlined, color: AppColors.textTertiary, size: 20),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          tooltip: 'Voice search',
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+            ),
+            const SizedBox(width: 2),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
             ),
           ],
         ),
@@ -525,10 +525,11 @@ class _HomePageState extends State<HomePage> {
       (Icons.star_rounded, 'Top Rated', Colors.amber, 1),
       (Icons.location_on_outlined, 'Local Sellers', AppColors.accent, 2),
       (Icons.verified, 'GST Verified', AppColors.verified, 1),
+      (Icons.bolt_rounded, 'Quick Response', AppColors.ctaOrange, 0),
     ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(3, (i) {
+      children: List.generate(4, (i) {
         final (icon, label, color, badge) = filters[i];
         final selected = _selectedQuickFilter == i;
         return GestureDetector(
@@ -953,18 +954,18 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSearchFiltersHeader(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const IndiamartLogo(height: 44, forDarkBackground: false),
-              const SizedBox(width: 12),
+              const IndiamartLogo(height: 36, forDarkBackground: false),
+              const SizedBox(width: 8),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(14),
@@ -972,29 +973,33 @@ class _HomePageState extends State<HomePage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: AppColors.textPrimary, size: 22),
-                      const SizedBox(width: 10),
+                      Icon(Icons.search, color: AppColors.textPrimary, size: 20),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: GestureDetector(
                           onTap: () => _showSearchOptions(context),
                           child: Text(
                             _searchBarLabel,
                             style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
                       IconButton(
                         onPressed: () => _showSearchOptions(context),
-                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textPrimary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textPrimary, size: 20),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                         tooltip: 'Search by image',
                       ),
                       IconButton(
                         onPressed: () => _showSearchOptions(context),
-                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textPrimary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textPrimary, size: 20),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                         tooltip: 'Voice search',
                       ),
                     ],
@@ -1003,7 +1008,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(

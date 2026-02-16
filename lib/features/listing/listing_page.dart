@@ -91,18 +91,18 @@ class _ListingPageState extends State<ListingPage> {
   Widget _buildSearchAndFiltersHeader(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const IndiamartLogo(height: 44, forDarkBackground: false),
-              const SizedBox(width: 12),
+              const IndiamartLogo(height: 36, forDarkBackground: false),
+              const SizedBox(width: 8),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(14),
@@ -110,25 +110,29 @@ class _ListingPageState extends State<ListingPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: AppColors.textPrimary, size: 22),
-                      const SizedBox(width: 10),
+                      Icon(Icons.search, color: AppColors.textPrimary, size: 20),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Search IndiaMART',
                           style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
                         onPressed: () {},
-                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textPrimary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textPrimary, size: 20),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                       ),
                       IconButton(
                         onPressed: () {},
-                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textPrimary, size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textPrimary, size: 20),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                       ),
                     ],
                   ),
@@ -136,7 +140,7 @@ class _ListingPageState extends State<ListingPage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
