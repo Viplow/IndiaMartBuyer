@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/indiamart_logo.dart';
 import '../../data/models/home_models.dart';
 import '../../data/mock_data.dart';
 import '../product/product_page.dart';
@@ -129,15 +130,8 @@ class _HomePageState extends State<HomePage> {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    'Indiamart',
-                    style: AppTypography.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                const IndiamartLogo(height: 36, forDarkBackground: true),
+                const Spacer(),
                 IconButton(
                   onPressed: () {},
                   icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
@@ -341,23 +335,32 @@ class _HomePageState extends State<HomePage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.mail_outline, size: 20, color: AppColors.accent),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          tooltip: 'Enquiry',
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: Icon(Icons.mail_outline, size: 18, color: AppColors.accent),
+                            label: Text('Send Enquiry', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.accent)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.accent,
+                              side: const BorderSide(color: AppColors.accent),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.call_outlined, size: 20, color: AppColors.verified),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          tooltip: 'Call',
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () {},
+                            icon: Icon(Icons.call_outlined, size: 18, color: Colors.white),
+                            label: Text('Call', style: AppTypography.textTheme.labelMedium?.copyWith(color: Colors.white)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.verified,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -701,10 +704,10 @@ class _HomePageState extends State<HomePage> {
             color: const Color(0xFF1D8480),
             child: Row(
               children: [
-                Icon(Icons.smart_toy_outlined, color: Colors.white, size: 26),
+                Icon(Icons.auto_awesome, color: Colors.white, size: 26),
                 const SizedBox(width: 10),
                 Text(
-                  'AI Chat',
+                  'AI Search',
                   style: AppTypography.textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -1566,7 +1569,7 @@ class _HomePageState extends State<HomePage> {
     }
     return Center(
       child: Text(
-        ['Home', 'Search', 'AI Chat', 'Quotes', 'Profile'][_selectedNavIndex],
+        ['Home', 'Search', 'AI Search', 'Quotes', 'Profile'][_selectedNavIndex],
         style: AppTypography.textTheme.titleLarge,
       ),
     );
@@ -1576,7 +1579,7 @@ class _HomePageState extends State<HomePage> {
     const items = [
       (Icons.home_rounded, 'Home'),
       (Icons.search_rounded, 'Search'),
-      (Icons.chat_bubble_outline_rounded, 'AI Chat'),
+      (Icons.auto_awesome, 'AI Search'),
       (Icons.request_quote_outlined, 'Quotes'),
       (Icons.person_outline_rounded, 'Profile'),
     ];
