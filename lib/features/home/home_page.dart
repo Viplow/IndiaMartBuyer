@@ -1309,7 +1309,7 @@ class _HomePageState extends State<HomePage> {
                       child: FilledButton.icon(
                         onPressed: () {},
                         icon: const Icon(Icons.chat, size: 20),
-                        label: const Text('WhatsApp'),
+                        label: const Text('Get Best Price'),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF25D366),
                           padding: const EdgeInsets.symmetric(vertical: 12),
