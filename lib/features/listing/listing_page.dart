@@ -107,18 +107,18 @@ class _ListingPageState extends State<ListingPage> {
   }
 
   Widget _buildSkeletonGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.72,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, index) => const ListingCardSkeleton(),
-    );
-  }
+  return GridView.builder(
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 0.72,
+    ),
+    itemCount: 10, // Changed from 6 to 10
+    itemBuilder: (context, index) => const ListingCardSkeleton(),
+  );
+}
 
   Widget _buildGrid() {
     return GridView.builder(
