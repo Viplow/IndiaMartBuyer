@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_decorations.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_network_image.dart';
@@ -169,20 +170,20 @@ class _CompanyPageState extends State<CompanyPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: FilledButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: () => _snack('Call Now: ${p.name}'),
-                    icon: const Icon(Icons.phone, size: 18),
-                    label: const Text('Call Now'),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.accent, padding: const EdgeInsets.symmetric(vertical: 10)),
+                    icon: Icon(Icons.call_outlined, size: 18, color: AppColors.headerTeal),
+                    label: Text('Call Now', style: TextStyle(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                    style: AppDecorations.ctaOutlinedStyle,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _snack('Get Price: ${p.name}'),
-                    icon: Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.accent),
-                    label: Text('Get Price', style: TextStyle(color: AppColors.accent)),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.accent), padding: const EdgeInsets.symmetric(vertical: 10)),
+                    onPressed: () => _snack('Get Best Price: ${p.name}'),
+                    icon: Icon(Icons.local_offer_outlined, size: 18, color: AppColors.headerTeal),
+                    label: Text('Get Best Price', style: TextStyle(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                    style: AppDecorations.ctaOutlinedStyle,
                   ),
                 ),
               ],

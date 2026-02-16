@@ -208,6 +208,9 @@ class MockData {
         ),
       ];
 
+  /// Number of calls connected (for "Your Enquiries" card).
+  static const int enquiryCallsConnectedCount = 12;
+
   static List<RecommendedItem> get recommended => const [
         RecommendedItem(
           id: '1',

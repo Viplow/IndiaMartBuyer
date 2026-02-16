@@ -7,6 +7,7 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/indiamart_logo.dart';
 import '../../data/models/home_models.dart';
 import '../../data/mock_data.dart';
+import '../listing/listing_page.dart';
 import '../product/product_page.dart';
 
 /// Home screen driven by SDUI. Shows generic name until login, then user name.
@@ -37,9 +38,18 @@ class _HomePageState extends State<HomePage> {
   int _selectedQuickFilter = 0;
   // Search: 0 = Paper making machine (default), 1 = Bicycle spare parts (photo med), 2 = Services (photo not important)
   int _searchMode = 0;
+  String _searchTabLocation = 'Noida';
+  String _searchTabCategory = 'Rice';
+  String _searchTabPrice = 'Upto ₹100';
+  String _searchTabPrice2 = '₹100';
   final _aiChatController = TextEditingController();
   final List<_ChatMessage> _aiMessages = [];
   final _aiScrollController = ScrollController();
+
+  static const List<String> _searchTabLocations = ['Noida', 'Delhi', 'Mumbai', 'Bangalore', 'Chennai'];
+  static const List<String> _searchTabCategories = ['Rice', 'Electronics', 'Machinery', 'Chemicals', 'Textiles'];
+  static const List<String> _searchTabPriceRanges = ['Upto ₹100', 'Upto ₹500', 'Upto ₹1,000'];
+  static const List<String> _searchTabPriceExact = ['₹100', '₹500', '₹1,000'];
 
   /// After login show name; until then show generic placeholder.
   String get _userName {
@@ -94,7 +104,7 @@ class _HomePageState extends State<HomePage> {
               _continueWhereYouLeft(context),
               const SizedBox(height: 24),
               _sectionHeader('Recommended for You', 'See All →', onViewAll: () {}),
-              ...MockData.recommended.map((r) => _recommendedCard(r)),
+              ..._recommendedSectionWithQuotesBanner(context),
               const SizedBox(height: 24),
               _sectionHeaderWithIcon(Icons.tune, 'Quick Filters'),
               const SizedBox(height: 12),
@@ -103,8 +113,6 @@ class _HomePageState extends State<HomePage> {
               _sectionHeader('Browse by Category', 'View All →', onViewAll: () {}),
               const SizedBox(height: 12),
               _browseGrid(context),
-              const SizedBox(height: 24),
-              _instantQuotesBanner(context),
               const SizedBox(height: 100),
             ]),
           ),
@@ -130,7 +138,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             Row(
               children: [
-                const IndiamartLogo(height: 36, forDarkBackground: true),
+                const IndiamartLogo(height: 48, forDarkBackground: true),
                 const Spacer(),
                 IconButton(
                   onPressed: () {},
@@ -139,42 +147,65 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ListingPage(),
+                    ),
+                  );
+                },
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: AppColors.textTertiary, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Search for products & services',
-                      style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
-                    ),
-                  ),
-                  Material(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(20),
-                    child: InkWell(
-                      onTap: () {},
-                      borderRadius: BorderRadius.circular(20),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(Icons.add, color: Colors.white, size: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: AppColors.textTertiary, size: 22),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Search for products & services',
+                          style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ListingPage()),
+                          );
+                        },
+                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textTertiary, size: 22),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        tooltip: 'Search by image',
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ListingPage()),
+                          );
+                        },
+                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textTertiary, size: 22),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        tooltip: 'Voice search',
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -228,12 +259,13 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Consolidated "Your Enquiries" card: Active / Pending / Viewed with counts and arrow.
+  /// Consolidated "Your Enquiries" card: Active / Pending / Viewed / Calls connected with counts and arrow.
   Widget _enquiriesConsolidatedCard(BuildContext context) {
     final list = MockData.enquiries;
     final activeCount = list.where((e) => e.status == 'Responded').length;
     final pendingCount = list.where((e) => e.status == 'Pending').length;
     final viewedCount = list.where((e) => e.status == 'Viewed').length;
+    final callsConnectedCount = MockData.enquiryCallsConnectedCount;
 
     return Material(
       color: Colors.transparent,
@@ -245,12 +277,23 @@ class _HomePageState extends State<HomePage> {
           decoration: AppDecorations.card(borderRadius: 14),
           child: Row(
             children: [
-              _enquiryStatusChip(context, activeCount, 'Active', Colors.green),
-              const SizedBox(width: 24),
-              _enquiryStatusChip(context, pendingCount, 'Pending', Colors.orange),
-              const SizedBox(width: 24),
-              _enquiryStatusChip(context, viewedCount, 'Viewed', AppColors.accent),
-              const Spacer(),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _enquiryStatusChip(context, activeCount, 'Active', Colors.green),
+                      const SizedBox(width: 24),
+                      _enquiryStatusChip(context, pendingCount, 'Pending', Colors.orange),
+                      const SizedBox(width: 24),
+                      _enquiryStatusChip(context, viewedCount, 'Viewed', AppColors.accent),
+                      const SizedBox(width: 24),
+                      _enquiryStatusChip(context, callsConnectedCount, 'Calls connected', AppColors.headerTeal),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textTertiary),
             ],
           ),
@@ -284,6 +327,21 @@ class _HomePageState extends State<HomePage> {
         Text(label, style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
       ],
     );
+  }
+
+  /// Recommended cards with Get Instant Quotes banner after the first 2 cards (e.g. if 4 cards: 2, banner, 2).
+  List<Widget> _recommendedSectionWithQuotesBanner(BuildContext context) {
+    final list = MockData.recommended;
+    const showAfterCount = 2;
+    final first = list.take(showAfterCount).map((r) => _recommendedCard(r)).toList();
+    final rest = list.skip(showAfterCount).map((r) => _recommendedCard(r)).toList();
+    return [
+      ...first,
+      const SizedBox(height: 12),
+      _instantQuotesBanner(context),
+      const SizedBox(height: 12),
+      ...rest,
+    ];
   }
 
   Widget _recommendedCard(RecommendedItem r) {
@@ -341,25 +399,18 @@ class _HomePageState extends State<HomePage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {},
-                            icon: Icon(Icons.mail_outline, size: 18, color: AppColors.accent),
-                            label: Text('Send Enquiry', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.accent)),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.accent,
-                              side: const BorderSide(color: AppColors.accent),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
+                            icon: Icon(Icons.call_outlined, size: 18, color: AppColors.headerTeal),
+                            label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                            style: AppDecorations.ctaOutlinedStyle,
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: FilledButton.icon(
+                          child: OutlinedButton.icon(
                             onPressed: () {},
-                            icon: Icon(Icons.call_outlined, size: 18, color: Colors.white),
-                            label: Text('Call', style: AppTypography.textTheme.labelMedium?.copyWith(color: Colors.white)),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.verified,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
+                            icon: Icon(Icons.local_offer_outlined, size: 18, color: AppColors.headerTeal),
+                            label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                            style: AppDecorations.ctaOutlinedStyle,
                           ),
                         ),
                       ],
@@ -879,49 +930,13 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Search listing: search bar on top (default "Paper making machine"); on tap show Bicycles / Services options.
+  /// Search listing: same header as listing page (logo + Search IndiaMART + filter row), then content.
   Widget _buildSearchListingContent(BuildContext context) {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: InkWell(
-                onTap: () => _showSearchOptions(context),
-                borderRadius: BorderRadius.circular(14),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: AppColors.textTertiary, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _searchBarLabel,
-                        style: AppTypography.textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.keyboard_arrow_down, color: AppColors.textTertiary, size: 24),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          _buildSearchFiltersHeader(context),
           Expanded(
             child: _searchMode == 0
                 ? _buildSearchListPaperMaking()
@@ -930,6 +945,142 @@ class _HomePageState extends State<HomePage> {
                     : _buildSearchListServices(),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Same as listing page: logo + Search IndiaMART bar (camera, mic) + filter row (Filter, Noida, Rice, Upto ₹100, ₹100).
+  Widget _buildSearchFiltersHeader(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const IndiamartLogo(height: 44, forDarkBackground: false),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: AppColors.textPrimary, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _showSearchOptions(context),
+                          child: Text(
+                            _searchBarLabel,
+                            style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _showSearchOptions(context),
+                        icon: Icon(Icons.camera_alt_outlined, color: AppColors.textPrimary, size: 22),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        tooltip: 'Search by image',
+                      ),
+                      IconButton(
+                        onPressed: () => _showSearchOptions(context),
+                        icon: Icon(Icons.mic_none_outlined, color: AppColors.textPrimary, size: 22),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        tooltip: 'Voice search',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _searchTabFilterChip(icon: Icons.filter_list, onTap: () {}),
+                const SizedBox(width: 8),
+                _searchTabFilterDropdown(
+                  value: _searchTabLocation,
+                  items: _searchTabLocations,
+                  onChanged: (v) => setState(() => _searchTabLocation = v ?? _searchTabLocation),
+                ),
+                const SizedBox(width: 8),
+                _searchTabFilterDropdown(
+                  value: _searchTabCategory,
+                  items: _searchTabCategories,
+                  onChanged: (v) => setState(() => _searchTabCategory = v ?? _searchTabCategory),
+                ),
+                const SizedBox(width: 8),
+                _searchTabFilterDropdown(
+                  value: _searchTabPrice,
+                  items: _searchTabPriceRanges,
+                  onChanged: (v) => setState(() => _searchTabPrice = v ?? _searchTabPrice),
+                ),
+                const SizedBox(width: 8),
+                _searchTabFilterDropdown(
+                  value: _searchTabPrice2,
+                  items: _searchTabPriceExact,
+                  onChanged: (v) => setState(() => _searchTabPrice2 = v ?? _searchTabPrice2),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchTabFilterChip({required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+
+  Widget _searchTabFilterDropdown({
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isDense: true,
+          icon: Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textPrimary),
+          style: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onChanged,
+        ),
       ),
     );
   }
@@ -1173,6 +1324,28 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: Icon(Icons.call_outlined, size: 18, color: AppColors.headerTeal),
+                  label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                  style: AppDecorations.ctaOutlinedStyle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: Icon(Icons.local_offer_outlined, size: 18, color: AppColors.headerTeal),
+                  label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                  style: AppDecorations.ctaOutlinedStyle,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1294,26 +1467,20 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.phone, size: 20),
-                        label: const Text('Call'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
+                        icon: Icon(Icons.call_outlined, size: 20, color: AppColors.headerTeal),
+                        label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                        style: AppDecorations.ctaOutlinedStyle,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: FilledButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.chat, size: 20),
-                        label: const Text('Get Best Price'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF25D366),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
+                        icon: Icon(Icons.local_offer_outlined, size: 20, color: AppColors.headerTeal),
+                        label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                        style: AppDecorations.ctaOutlinedStyle,
                       ),
                     ),
                   ],
@@ -1462,30 +1629,20 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.phone, size: 16),
-                        label: const Text('Call', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.ctaOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          minimumSize: Size.zero,
-                        ),
+                        icon: Icon(Icons.call_outlined, size: 16, color: AppColors.headerTeal),
+                        label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600, fontSize: 12)),
+                        style: AppDecorations.ctaOutlinedStyle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: FilledButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.local_offer_outlined, size: 16),
-                        label: const Text('Best Price', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.headerTeal,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          minimumSize: Size.zero,
-                        ),
+                        icon: Icon(Icons.local_offer_outlined, size: 16, color: AppColors.headerTeal),
+                        label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600, fontSize: 12)),
+                        style: AppDecorations.ctaOutlinedStyle,
                       ),
                     ),
                   ],

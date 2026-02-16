@@ -5,7 +5,6 @@ import '../../core/widgets/indiamart_logo.dart';
 import '../../data/mock_data.dart';
 import '../../data/models/listing_item.dart';
 import 'widgets/empty_state.dart';
-import 'widgets/filter_bar.dart';
 import 'widgets/listing_card.dart';
 import 'widgets/listing_skeleton.dart';
 import '../company/company_page.dart';
@@ -30,18 +29,10 @@ class ListingPage extends StatefulWidget {
 class _ListingPageState extends State<ListingPage> {
   List<ListingItem> _listings = [];
   bool _loading = true;
-  String _sortValue = 'Relevance';
   String _locationFilter = 'Noida';
   String _categoryFilter = 'Rice';
   String _priceFilter = 'Upto ₹100';
   String _priceFilter2 = '₹100';
-  final List<FilterChipItem> _chips = [
-    const FilterChipItem(id: 'price', label: 'Price', selected: false),
-    const FilterChipItem(id: 'moq', label: 'MOQ', selected: false),
-    const FilterChipItem(id: 'location', label: 'Location', selected: false),
-    const FilterChipItem(id: 'supplier', label: 'Supplier Type', selected: false),
-  ];
-  static const List<String> _sortOptions = ['Relevance', 'Price: Low to High', 'Verified Suppliers'];
   static const List<String> _locations = ['Noida', 'Delhi', 'Mumbai', 'Bangalore', 'Chennai'];
   static const List<String> _categories = ['Rice', 'Electronics', 'Machinery', 'Chemicals', 'Textiles'];
   static const List<String> _priceRanges = ['Upto ₹100', 'Upto ₹500', 'Upto ₹1,000'];
@@ -75,17 +66,6 @@ class _ListingPageState extends State<ListingPage> {
     });
   }
 
-  void _onChipTap(String id) {
-    setState(() {
-      for (var i = 0; i < _chips.length; i++) {
-        if (_chips[i].id == id) {
-          _chips[i] = FilterChipItem(id: _chips[i].id, label: _chips[i].label, selected: !_chips[i].selected);
-          break;
-        }
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,16 +74,6 @@ class _ListingPageState extends State<ListingPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSearchAndFiltersHeader(context),
-            Material(
-              elevation: 0,
-              child: FilterBar(
-                chips: _chips,
-                onChipTap: _onChipTap,
-                sortValue: _sortValue,
-                sortOptions: _sortOptions,
-                onSortChanged: (v) => setState(() => _sortValue = v ?? _sortValue),
-              ),
-            ),
             Expanded(
               child: _loading
                   ? _buildSkeletonGrid()
@@ -128,13 +98,13 @@ class _ListingPageState extends State<ListingPage> {
         children: [
           Row(
             children: [
-              const IndiamartLogo(height: 32, forDarkBackground: false),
+              const IndiamartLogo(height: 44, forDarkBackground: false),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.border),
                   ),

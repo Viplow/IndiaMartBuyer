@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/company.dart';
 
@@ -118,16 +119,26 @@ class CompanyHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onContact,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onContact,
+                  icon: Icon(Icons.call_outlined, size: 18, color: AppColors.headerTeal),
+                  label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                  style: AppDecorations.ctaOutlinedStyle,
+                ),
               ),
-              child: const Text('Contact Supplier'),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onGetBestPrice,
+                  icon: Icon(Icons.local_offer_outlined, size: 18, color: AppColors.headerTeal),
+                  label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+                  style: AppDecorations.ctaOutlinedStyle,
+                ),
+              ),
+            ],
           ),
         ],
       ),

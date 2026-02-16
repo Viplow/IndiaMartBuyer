@@ -135,24 +135,20 @@ class ListingCard extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: OutlinedButton.icon(
             onPressed: onContactSupplier,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Contact Supplier'),
+            icon: Icon(Icons.call_outlined, size: 18, color: AppColors.headerTeal),
+            label: Text('Call Now', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+            style: AppDecorations.ctaOutlinedStyle,
           ),
         ),
         AppSpacing.gapSm,
         Expanded(
-          child: FilledButton(
+          child: OutlinedButton.icon(
             onPressed: onGetBestPrice,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Get Best Price'),
+            icon: Icon(Icons.local_offer_outlined, size: 18, color: AppColors.headerTeal),
+            label: Text('Get Best Price', style: AppTypography.textTheme.labelMedium?.copyWith(color: AppColors.headerTeal, fontWeight: FontWeight.w600)),
+            style: AppDecorations.ctaOutlinedStyle,
           ),
         ),
       ],

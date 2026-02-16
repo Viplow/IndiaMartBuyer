@@ -49,4 +49,13 @@ abstract class AppDecorations {
   static RoundedRectangleBorder buttonShape = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(12),
   );
+
+  /// CTA style from design: white bg, teal border & text (#1D8480). Use for Call Now / Get Best Price.
+  static ButtonStyle get ctaOutlinedStyle => OutlinedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.headerTeal,
+        side: const BorderSide(color: AppColors.headerTeal),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      );
 }

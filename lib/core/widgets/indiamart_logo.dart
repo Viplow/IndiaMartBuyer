@@ -16,7 +16,7 @@ class IndiamartLogo extends StatelessWidget {
 
   const IndiamartLogo({
     super.key,
-    this.height = 40,
+    this.height = 52,
     this.forDarkBackground = false,
     this.compact = false,
   });
