@@ -7,6 +7,8 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/indiamart_logo.dart';
 import '../../data/models/home_models.dart';
 import '../../data/mock_data.dart';
+import '../ai_chat/ai_chat_context.dart';
+import '../ai_chat/gemini_chat_service.dart';
 import '../listing/listing_page.dart';
 import '../product/product_page.dart';
 
@@ -701,13 +703,22 @@ class _HomePageState extends State<HomePage> {
       _aiChatController.clear();
     });
     _scrollAIToEnd();
-    // Demo reply after a short delay
-    Future.delayed(const Duration(milliseconds: 600), () {
+
+    // Show typing placeholder
+    setState(() {
+      _aiMessages.add(_ChatMessage(isUser: false, text: '...'));
+    });
+    _scrollAIToEnd();
+
+    final contextString = AiChatContext.buildContext(t);
+    GeminiChatService.getReply(userMessage: t, contextFromMockData: contextString)
+        .then((reply) {
       if (!mounted) return;
       setState(() {
+        _aiMessages.removeLast(); // remove "..."
         _aiMessages.add(_ChatMessage(
           isUser: false,
-          text: _demoAIResponse(t),
+          text: reply ?? 'Sorry, I couldn\'t generate a response. Please try again.',
         ));
       });
       _scrollAIToEnd();
@@ -726,26 +737,12 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  String _demoAIResponse(String query) {
-    final q = query.toLowerCase();
-    if (q.contains('supplier') || q.contains('find') || q.contains('who')) {
-      return 'I can help you find suppliers. Try searching by product or category on the Home screen, or use "Get Instant Quotes" to request quotes from verified sellers.';
-    }
-    if (q.contains('quote') || q.contains('price')) {
-      return 'You can get instant quotes by tapping "Get Instant Quotes" on the Home screen or the Quotes tab. Describe your requirement and we\'ll connect you with verified sellers.';
-    }
-    if (q.contains('product') || q.contains('category')) {
-      return 'Browse by category on the Home screen to explore products. You can also use the search bar to find specific products and services.';
-    }
-    return 'Thanks for your message. I\'m your B2B assistant. I can help you find suppliers, get quotes, and explore categories. Try asking: "Find suppliers for machinery" or "How do I get a quote?"';
-  }
-
   Widget _buildAIChatContent(BuildContext context) {
     const suggestedPrompts = [
-      'Find suppliers for industrial machinery',
-      'Get quotes for raw materials',
-      'Compare products by category',
-      'How do I request a quote?',
+      'Local sellers for Rice in Noida',
+      'Price of steel coils in Delhi',
+      'What is MOQ?',
+      'How do I get a quote?',
     ];
     return SafeArea(
       child: Column(
