@@ -1,14 +1,13 @@
-/// Gemini API configuration.
-/// For production, use --dart-define=GEMINI_API_KEY=your_key or env.
+/// LLM Gateway API configuration.
+/// Use --dart-define=LLM_GATEWAY_KEY=your_key for the Bearer token.
 class AiConfig {
   AiConfig._();
 
-  static const String geminiApiKey = String.fromEnvironment(
-    'GEMINI_API_KEY',
+  static const String llmGatewayKey = String.fromEnvironment(
+    'LLM_GATEWAY_KEY',
     defaultValue: '',
   );
 
-  static const String geminiModel = 'gemini-2.5-flash';
-  static const String geminiBaseUrl =
-      'https://generativelanguage.googleapis.com/v1beta';
+  static const String llmGatewayBaseUrl = 'https://imllm.intermesh.net';
+  static const String llmGatewayModel = 'google/gemini-2.5-flash';
 }

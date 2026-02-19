@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/session/app_session.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
@@ -7,8 +9,12 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/indiamart_logo.dart';
 import '../../data/models/home_models.dart';
 import '../../data/mock_data.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../data/ai_chat_data.dart';
+import '../../data/ai_chat_mock_data.dart';
 import '../ai_chat/ai_chat_context.dart';
 import '../ai_chat/gemini_chat_service.dart';
+import '../ai_chat/indiamart_search_service.dart';
 import '../listing/listing_page.dart';
 import '../product/product_page.dart';
 
@@ -32,7 +38,9 @@ class HomePage extends StatefulWidget {
 class _ChatMessage {
   final bool isUser;
   final String text;
-  _ChatMessage({required this.isUser, required this.text});
+  /// When set, show these sellers as cards above the text (assistant only).
+  final List<AiChatSeller>? sellers;
+  _ChatMessage({required this.isUser, required this.text, this.sellers});
 }
 
 class _HomePageState extends State<HomePage> {
@@ -64,6 +72,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     currentUserName.addListener(_onSessionChanged);
+    AiChatData.loadScrapedSellers();
   }
 
   @override
@@ -695,7 +704,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _sendAIMessage(String text) {
+  Future<void> _sendAIMessage(String text) async {
     final t = text.trim();
     if (t.isEmpty) return;
     setState(() {
@@ -704,25 +713,70 @@ class _HomePageState extends State<HomePage> {
     });
     _scrollAIToEnd();
 
-    // Show typing placeholder
     setState(() {
+      _aiMessages.add(_ChatMessage(isUser: false, text: 'Searching IndiaMART...'));
+    });
+    _scrollAIToEnd();
+
+    final intent = await GeminiChatService.extractSearchIntent(t);
+    List<AiChatSeller> liveSellers = [];
+    Map<String, List<AiChatSeller>>? comparisonSections;
+
+    if (intent.isCompareProducts) {
+      final sections = <String, List<AiChatSeller>>{};
+      for (final product in intent.compareProducts) {
+        final list = await IndiaMartSearchService.search(product, product: product, location: null);
+        sections[_titleCase(product)] = list;
+      }
+      comparisonSections = sections;
+      liveSellers = sections.values.expand((e) => e).take(5).toList();
+    } else if (intent.isCompareCities) {
+      final product = intent.product!;
+      final sections = <String, List<AiChatSeller>>{};
+      for (final city in intent.compareLocations) {
+        final list = await IndiaMartSearchService.search(
+          '$product $city',
+          product: product,
+          location: city,
+        );
+        sections['$product in ${_titleCase(city)}'] = list;
+      }
+      comparisonSections = sections;
+      liveSellers = sections.values.expand((e) => e).take(5).toList();
+    } else {
+      liveSellers = await IndiaMartSearchService.search(
+        t,
+        product: intent.product,
+        location: intent.location,
+        searchQuery: intent.searchQuery,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _aiMessages.removeLast();
       _aiMessages.add(_ChatMessage(isUser: false, text: '...'));
     });
     _scrollAIToEnd();
 
-    final contextString = AiChatContext.buildContext(t);
-    GeminiChatService.getReply(userMessage: t, contextFromMockData: contextString)
-        .then((reply) {
-      if (!mounted) return;
-      setState(() {
-        _aiMessages.removeLast(); // remove "..."
-        _aiMessages.add(_ChatMessage(
-          isUser: false,
-          text: reply ?? 'Sorry, I couldn\'t generate a response. Please try again.',
-        ));
-      });
-      _scrollAIToEnd();
+    final contextString = comparisonSections != null && comparisonSections.isNotEmpty
+        ? AiChatContext.buildContext(t, comparisonSections: comparisonSections)
+        : AiChatContext.buildContext(t, liveSellers: liveSellers.isNotEmpty ? liveSellers : null);
+    final reply = await GeminiChatService.getReply(userMessage: t, contextFromMockData: contextString);
+    if (!mounted) return;
+    setState(() {
+      _aiMessages.removeLast();
+      _aiMessages.add(_ChatMessage(
+        isUser: false,
+        text: reply ?? 'Sorry, I couldn\'t generate a response. Please try again.',
+        sellers: liveSellers.isNotEmpty ? liveSellers : null,
+      ));
     });
+    _scrollAIToEnd();
+  }
+
+  static String _titleCase(String s) {
+    return s.split(' ').map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}').join(' ');
   }
 
   void _scrollAIToEnd() {
@@ -735,6 +789,271 @@ class _HomePageState extends State<HomePage> {
         );
       }
     });
+  }
+
+  static final _urlRegex = RegExp(r'https?://[^\s]+');
+
+  Widget _buildSellerCard(AiChatSeller s) {
+    const cardRadius = 12.0;
+    const imageSize = 72.0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(cardRadius),
+        clipBehavior: Clip.antiAlias,
+        elevation: 1,
+        child: InkWell(
+          onTap: () {
+            final uri = s.url != null && s.url!.isNotEmpty ? Uri.tryParse(s.url!) : null;
+            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: imageSize,
+                    height: imageSize,
+                    child: s.imageUrl != null && s.imageUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: s.imageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: AppColors.surfaceVariant,
+                              child: const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+                            ),
+                            errorWidget: (_, __, ___) => _sellerPlaceholder(),
+                          )
+                        : _sellerPlaceholder(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        s.supplierName,
+                        style: AppTypography.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (s.productTitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          s.productTitle,
+                          style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      const SizedBox(height: 2),
+                      Text(
+                        s.location,
+                        style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Price: ',
+                            style: AppTypography.textTheme.labelSmall?.copyWith(color: AppColors.textTertiary),
+                          ),
+                          Expanded(
+                            child: Text(
+                              s.priceRange,
+                              style: AppTypography.textTheme.labelMedium?.copyWith(
+                                color: AppColors.headerTeal,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (s.description != null && s.description!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          s.description!,
+                          style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(Icons.open_in_new, size: 18, color: AppColors.headerTeal),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sellerPlaceholder() {
+    return Container(
+      color: AppColors.surfaceVariant,
+      child: Icon(Icons.store, color: AppColors.headerTeal.withValues(alpha: 0.6), size: 32),
+    );
+  }
+
+  static bool _isSeparatorRow(List<String> cells) =>
+      cells.isNotEmpty && cells.every((c) => RegExp(r'^[-:\s]+$').hasMatch(c));
+
+  /// Parses markdown table from assistant message. Returns (textBefore, headerRow, dataRows, textAfter).
+  /// Skips separator-only rows so we never use "|---|" as header (which would show single letters).
+  static ({String before, List<String> header, List<List<String>> rows, String after}) _parseMarkdownTable(String text) {
+    final lines = text.split('\n');
+    var startIdx = -1;
+    var endIdx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.trim().contains('|') && line.trim().length > 2) {
+        if (startIdx < 0) startIdx = i;
+        endIdx = i;
+      } else if (startIdx >= 0) {
+        break;
+      }
+    }
+    if (startIdx < 0 || endIdx < startIdx) {
+      return (before: text, header: [], rows: [], after: '');
+    }
+    final before = lines.take(startIdx).join('\n').trim();
+    final after = endIdx < lines.length - 1 ? lines.sublist(endIdx + 1).join('\n').trim() : '';
+    final tableLines = lines.sublist(startIdx, endIdx + 1);
+    final parsed = tableLines.map((line) {
+      return line.split('|').map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+    }).toList();
+    if (parsed.isEmpty) return (before: text, header: [], rows: [], after: '');
+    // Skip separator-only rows; first non-separator row is header
+    final nonSep = parsed.where((row) => !_isSeparatorRow(row)).toList();
+    if (nonSep.isEmpty) return (before: text, header: [], rows: [], after: '');
+    final header = nonSep.first;
+    // Require at least 2 columns so we don't treat "| e |\n| i |" as a valid table
+    if (header.length < 2) return (before: text, header: [], rows: [], after: '');
+    final dataRows = nonSep.skip(1).where((row) => row.length >= 2).toList();
+    return (before: before, header: header, rows: dataRows, after: after);
+  }
+
+  Widget _buildChatMessageText(String text, Color textColor, {required bool isUser}) {
+    final style = AppTypography.textTheme.bodyMedium?.copyWith(color: textColor);
+    final linkStyle = style?.copyWith(
+      color: isUser ? Colors.white : const Color(0xFF1D8480),
+      decoration: TextDecoration.underline,
+    );
+
+    if (!isUser) {
+      final parsed = _parseMarkdownTable(text);
+      if (parsed.header.isNotEmpty && parsed.rows.isNotEmpty) {
+        final children = <Widget>[];
+        if (parsed.before.isNotEmpty) {
+          children.add(Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildTextWithLinks(parsed.before, style, linkStyle),
+          ));
+        }
+        children.add(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Table(
+              columnWidths: Map.fromIterables(
+                List.generate(parsed.header.length, (i) => i),
+                List.generate(parsed.header.length, (i) => const FlexColumnWidth(1)),
+              ),
+              border: TableBorder.all(color: AppColors.textTertiary.withValues(alpha: 0.3), width: 0.5),
+              defaultColumnWidth: const IntrinsicColumnWidth(),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: AppColors.headerTeal.withValues(alpha: 0.12)),
+                  children: parsed.header.map((c) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Text(c, style: AppTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600, color: textColor)),
+                  )).toList(),
+                ),
+                ...parsed.rows.map((row) => TableRow(
+                  children: (row.length >= parsed.header.length ? row : row + List.filled(parsed.header.length - row.length, ''))
+                      .take(parsed.header.length)
+                      .map((cell) => _buildTableCell(cell, style, linkStyle))
+                      .toList(),
+                )),
+              ],
+            ),
+          ),
+        );
+        if (parsed.after.isNotEmpty) {
+          children.add(Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _buildTextWithLinks(parsed.after, style, linkStyle),
+          ));
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: children);
+      }
+    }
+
+    return _buildTextWithLinks(text, style, linkStyle);
+  }
+
+  Widget _buildTableCell(String cell, TextStyle? style, TextStyle? linkStyle) {
+    final urlMatch = _urlRegex.firstMatch(cell);
+    if (urlMatch != null) {
+      final url = urlMatch.group(0)!.replaceAll(RegExp(r'[.,;:!?)\]]+$'), '');
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: GestureDetector(
+          onTap: () {
+            final uri = Uri.tryParse(url);
+            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+          child: Text(url, style: linkStyle?.copyWith(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Text(cell, style: style?.copyWith(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  Widget _buildTextWithLinks(String text, TextStyle? style, TextStyle? linkStyle) {
+    final matches = _urlRegex.allMatches(text).toList();
+    if (matches.isEmpty) return Text(text, style: style);
+    final spans = <TextSpan>[];
+    var start = 0;
+    for (final match in matches) {
+      if (match.start > start) {
+        spans.add(TextSpan(text: text.substring(start, match.start), style: style));
+      }
+      String url = match.group(0)!;
+      url = url.replaceAll(RegExp(r'[.,;:!?)\]]+$'), '');
+      final link = url;
+      spans.add(TextSpan(
+        text: url,
+        style: linkStyle,
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            final uri = Uri.tryParse(link);
+            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+      ));
+      start = match.end;
+    }
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start), style: style));
+    }
+    return RichText(text: TextSpan(children: spans, style: style));
   }
 
   Widget _buildAIChatContent(BuildContext context) {
@@ -850,11 +1169,29 @@ class _HomePageState extends State<HomePage> {
                                     bottomRight: Radius.circular(m.isUser ? 4 : 16),
                                   ),
                                 ),
-                                child: Text(
-                                  m.text,
-                                  style: AppTypography.textTheme.bodyMedium?.copyWith(
-                                    color: m.isUser ? Colors.white : AppColors.textPrimary,
-                                  ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (!m.isUser && m.sellers != null && m.sellers!.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${m.sellers!.length} result${m.sellers!.length == 1 ? '' : 's'}',
+                                        style: AppTypography.textTheme.labelMedium?.copyWith(
+                                          color: AppColors.textTertiary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ...m.sellers!.map((s) => _buildSellerCard(s)),
+                                      const SizedBox(height: 12),
+                                    ],
+                                    _buildChatMessageText(
+                                      m.text,
+                                      m.isUser ? Colors.white : AppColors.textPrimary,
+                                      isUser: m.isUser,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

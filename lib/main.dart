@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/sdui/sdui_bootstrap.dart';
 import 'core/sdui/sdui_screen_loader.dart';
+import 'core/sdui/sdui_screen_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,9 +21,15 @@ class B2BMarketplaceApp extends StatelessWidget {
       theme: AppTheme.light,
       initialRoute: '/',
       routes: {
-        '/': (context) => SDUIScreenLoader(assetPath: 'assets/sdui/home_screen.json'),
-        '/sign-in': (context) => SDUIScreenLoader(assetPath: 'assets/sdui/sign_in_screen.json'),
-        '/login': (context) => SDUIScreenLoader(assetPath: 'assets/sdui/login_screen.json'),
+        '/': (context) => SDUIScreenLoader(
+              jsonFuture: SDUIScreenService.getScreen('home'),
+            ),
+        '/sign-in': (context) => SDUIScreenLoader(
+              jsonFuture: SDUIScreenService.getScreen('sign-in'),
+            ),
+        '/login': (context) => SDUIScreenLoader(
+              jsonFuture: SDUIScreenService.getScreen('login'),
+            ),
       },
     );
   }

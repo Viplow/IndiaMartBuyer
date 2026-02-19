@@ -1,195 +1,65 @@
 import '../../data/ai_chat_mock_data.dart';
 
-/// Builds context string from mock data for the Gemini prompt.
+/// Builds context string for the LLM. No hardcoded city/category lists; uses live search or a simple sample.
 class AiChatContext {
   AiChatContext._();
 
-  static const _locations = [
-    'noida',
-    'delhi',
-    'mumbai',
-    'pune',
-    'chennai',
-    'bangalore',
-    'kolkata',
-    'hyderabad',
-    'ahmedabad',
-    'gurgaon',
-    'faridabad',
-    'ghaziabad',
-    'vadodara',
-    'ncr',
-  ];
-
-  static const _categories = [
-    'rice',
-    'machinery',
-    'raw materials',
-    'steel',
-    'electronics',
-    'grains',
-    'cnc',
-    'hydraulic',
-    'copper',
-    'wire',
-    'basmati',
-    'components',
-    // Textiles & Garments
-    'textile',
-    'garment',
-    'fabric',
-    'cotton',
-    'yarn',
-    'denim',
-    // Chemicals
-    'chemical',
-    // Packaging
-    'packaging',
-    'corrugated',
-    'box',
-    'film',
-    // Construction & Building
-    'construction',
-    'building',
-    'cement',
-    'tiles',
-    'tmt',
-    'aggregate',
-    // Industrial Equipment
-    'industrial',
-    'equipment',
-    'pump',
-    'motor',
-    'generator',
-    'compressor',
-    'boiler',
-    'conveyor',
-    // Food & Beverage
-    'food',
-    'beverage',
-    'edible oil',
-    'spice',
-    'pulse',
-    'snack',
-    // Plastics & Polymers
-    'plastic',
-    'polymer',
-    'pp',
-    'pe',
-    'pvc',
-    'hdpe',
-    // Rubber
-    'rubber',
-    'gasket',
-    // Paper
-    'paper',
-    'kraft',
-    'tissue',
-    // Paints & Coatings
-    'paint',
-    'coating',
-    // Tools & Hardware
-    'tools',
-    'hardware',
-    'fastener',
-    'abrasive',
-    // Electrical
-    'electrical',
-    'cable',
-    'solar',
-    'inverter',
-    'switchgear',
-    // Safety
-    'safety',
-    'ppe',
-    'fire extinguisher',
-    // Medical & Pharma
-    'medical',
-    'pharma',
-    // Agriculture
-    'agriculture',
-    'fertilizer',
-    'seed',
-    'pesticide',
-    'tractor',
-    // Auto Parts
-    'auto',
-    'automobile',
-    'spare',
-    'bicycle',
-    'bike',
-    // Furniture & Office
-    'furniture',
-    'office',
-    'chair',
-    'desk',
-    // Lab & Scientific
-    'lab',
-    'scientific',
-    'testing equipment',
-  ];
-
-  /// Returns a context string for the LLM: relevant sellers and FAQ based on [query].
-  static String buildContext(String query) {
-    final q = query.toLowerCase().trim();
+  /// Returns a context string for the LLM.
+  /// When [comparisonSections] is provided (e.g. for "compare rice and lentils" or "rice in Kanpur vs Delhi"), each entry is a label and list of sellers; the LLM should compare prices across these sections.
+  static String buildContext(String query, {List<AiChatSeller>? liveSellers, Map<String, List<AiChatSeller>>? comparisonSections}) {
+    final q = query.trim().toLowerCase();
     if (q.isEmpty) return 'No specific context.';
 
     final buffer = StringBuffer();
+    const maxResults = 5;
 
-    // Detect location and category from query
-    String? matchedLocation;
-    for (final loc in _locations) {
-      if (q.contains(loc)) {
-        matchedLocation = loc;
-        break;
-      }
-    }
-    if (matchedLocation == 'delhi' || matchedLocation == 'ncr') matchedLocation = 'delhi ncr';
-
-    final matchedCategories = <String>[];
-    for (final cat in _categories) {
-      if (q.contains(cat)) matchedCategories.add(cat);
-    }
-    // Map some terms to our category names
-    if (q.contains('steel') || q.contains('copper') || q.contains('wire')) {
-      if (!matchedCategories.contains('raw materials')) matchedCategories.add('raw materials');
-    }
-    if (q.contains('cnc') || q.contains('hydraulic') || q.contains('press')) {
-      if (!matchedCategories.contains('machinery')) matchedCategories.add('machinery');
-    }
-    if (q.contains('basmati') || q.contains('grains')) {
-      if (!matchedCategories.contains('rice')) matchedCategories.add('rice');
-    }
-
-    // Sellers: filter by location and/or category
-    final sellers = AiChatMockData.sellers.where((s) {
-      final locMatch = matchedLocation == null ||
-          s.location.toLowerCase().contains(matchedLocation) ||
-          matchedLocation.contains(s.location.toLowerCase().split(' ').first);
-      final catMatch = matchedCategories.isEmpty ||
-          matchedCategories.any((c) =>
-              s.category.toLowerCase().contains(c) ||
-              c.contains(s.category.toLowerCase()));
-      return locMatch && catMatch;
-    }).toList();
-
-    if (sellers.isNotEmpty) {
-      buffer.writeln('Sellers / products (use only this data when answering about local sellers or prices):');
-      for (final s in sellers.take(8)) {
-        buffer.writeln(
-            '- ${s.supplierName}, ${s.location}: ${s.productTitle}. Price: ${s.priceRange}. ${s.moq ?? ""}');
-      }
+    final hasComparison = comparisonSections != null && comparisonSections.isNotEmpty;
+    if (hasComparison) {
+      buffer.writeln('The user wants to COMPARE prices. Below are separate sections (by product or by city). For each section list sellers with Name, Location, Product, Price, MOQ, Link. Then give a clear comparison: which product/city/seller has lowest or highest price, or a short comparison table.');
       buffer.writeln();
+      for (final entry in comparisonSections.entries) {
+        final label = entry.key;
+        final sellers = entry.value.take(maxResults).toList();
+        buffer.writeln('=== $label ===');
+        if (sellers.isEmpty) {
+          buffer.writeln('(No results)');
+        } else {
+          for (final s in sellers) {
+            final linkPart = (s.url != null && s.url!.isNotEmpty) ? ' Link: ${s.url}' : '';
+            buffer.writeln('- ${s.supplierName} | Location: ${s.location} | Product: ${s.productTitle} | Price: ${s.priceRange} | ${s.moq ?? ""}$linkPart');
+          }
+        }
+        buffer.writeln();
+      }
+      buffer.writeln('Compare the above sections by Price. Say which has the lowest/highest or summarize.');
+    } else {
+      final fromLiveSearch = liveSellers != null && liveSellers.isNotEmpty;
+      final sellers = fromLiveSearch ? liveSellers.take(maxResults).toList() : <AiChatSeller>[];
+
+      if (sellers.isNotEmpty) {
+        buffer.writeln(
+            'Live search results from IndiaMART for "$query". List sellers with Name, Location, Product, Price, MOQ, Link. When the user asks to compare prices between two sellers, use the Price field and name both sellers with their prices.');
+        buffer.writeln();
+        for (final s in sellers) {
+          final linkPart = (s.url != null && s.url!.isNotEmpty) ? ' Link: ${s.url}' : '';
+          buffer.writeln(
+              '- ${s.supplierName} | Location: ${s.location} | Product: ${s.productTitle} | Price: ${s.priceRange} | ${s.moq ?? ""}$linkPart');
+        }
+        buffer.writeln();
+      } else {
+        buffer.writeln(
+            'No IndiaMART listing results found for "$query". Suggest the user try: different product keywords, or add a city. Do not invent or list any sellers.');
+      }
     }
 
-    // FAQ: if query looks like a question, add relevant FAQ
+    // FAQ: when query looks like a question or matches FAQ keywords
     final isQuestion = q.contains('?') ||
         q.contains('what ') ||
         q.contains('how ') ||
         q.contains('can i') ||
         q.contains('why ') ||
         q.contains('when ');
-    if (isQuestion || matchedCategories.isEmpty) {
+    if (isQuestion) {
       final relevantFaq = AiChatMockData.faq.where((e) {
         return e.keywords.any((k) => q.contains(k));
       }).toList();
@@ -202,11 +72,6 @@ class AiChatContext {
       }
     }
 
-    if (buffer.isEmpty) {
-      buffer.writeln(
-          'No specific data for this query. General categories we have: Rice, Machinery, Raw Materials, Electronics, Textiles & Garments, Chemicals, Packaging, Construction & Building, Industrial Equipment, Food & Beverage, Plastics & Polymers, Rubber, Paper, Paints & Coatings, Tools & Hardware, Electrical Equipment, Safety Equipment, Medical & Pharma, Agriculture, Auto Parts, Furniture & Office, Lab & Scientific. Locations: Noida, Delhi NCR, Mumbai, Pune, Chennai, Bangalore, Vadodara. Suggest the user try "local sellers for [product] in [city]" or ask about MOQ, quotes, payment, delivery.');
-    }
-
     return buffer.toString();
   }
 
@@ -214,18 +79,18 @@ class AiChatContext {
   static String fallbackReplyFromContext(String contextString) {
     final lines = contextString.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
     if (lines.isEmpty) {
-      return 'I couldn\'t reach the AI right now. Try asking for "local sellers for Rice in Noida" or "What is MOQ?" in a moment.';
+      return 'I couldn\'t reach the AI right now. Try again in a moment or rephrase your search.';
     }
     final buffer = StringBuffer();
-    final sellerLines = lines.where((l) => l.startsWith('- ') && l.contains(',')).take(6).toList();
+    final sellerLines = lines.where((l) => l.startsWith('- ') && l.contains(',')).take(5).toList();
     final faqAnswers = <String>[];
     for (var i = 0; i < lines.length; i++) {
       if (lines[i].startsWith('A: ')) faqAnswers.add(lines[i].substring(3).trim());
     }
     if (sellerLines.isNotEmpty) {
-      buffer.writeln('Here’s what we have from our database:');
+      buffer.writeln('Here’s what we have from our database (tap a link to open):');
       for (final line in sellerLines) {
-        buffer.writeln(line.substring(2)); // drop "- "
+        buffer.writeln(line.substring(2)); // drop "- " (keeps "Link: https://..." in line)
       }
     }
     if (faqAnswers.isNotEmpty && buffer.isNotEmpty) buffer.writeln();

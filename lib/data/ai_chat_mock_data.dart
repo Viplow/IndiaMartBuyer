@@ -7,6 +7,12 @@ class AiChatSeller {
   final String productTitle;
   final String priceRange;
   final String? moq;
+  /// Company or product page URL (e.g. from IndiaMART). Shown as tappable link in chat.
+  final String? url;
+  /// Optional image URL (e.g. og:image or listing thumbnail) for card display.
+  final String? imageUrl;
+  /// Optional short description (e.g. og:description) for card display.
+  final String? description;
 
   const AiChatSeller({
     required this.category,
@@ -15,7 +21,24 @@ class AiChatSeller {
     required this.productTitle,
     required this.priceRange,
     this.moq,
+    this.url,
+    this.imageUrl,
+    this.description,
   });
+
+  factory AiChatSeller.fromJson(Map<String, dynamic> json) {
+    return AiChatSeller(
+      category: json['category'] as String? ?? '',
+      location: json['location'] as String? ?? '',
+      supplierName: json['supplierName'] as String? ?? '',
+      productTitle: json['productTitle'] as String? ?? '',
+      priceRange: json['priceRange'] as String? ?? '',
+      moq: json['moq'] as String?,
+      url: json['url'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      description: json['description'] as String?,
+    );
+  }
 }
 
 class AiChatFaqEntry {

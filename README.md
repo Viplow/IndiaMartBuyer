@@ -55,8 +55,15 @@ Then open `ios/Runner.xcworkspace` in Xcode, select your device or “Any iOS De
 ## SDUI
 
 1. Register components in `lib/core/sdui/sdui_bootstrap.dart`.
-2. Serve JSON with `type` (e.g. `ListingScreen`, `CompanyScreen`) and `attributes` / `children`.
-3. Load a screen via `SDUIScreenLoader(assetPath: 'assets/sdui/listing_screen.json')` or `jsonFuture: http.get(...)`.
+2. Screens are loaded via **SDUIScreenService**: server first (when configured), then bundled asset fallback.
+3. **Production:** Set `SDUI_BASE_URL` so the app fetches screen JSON from your API. See **[docs/SDUI_API.md](docs/SDUI_API.md)** for the API contract.
+
+```bash
+flutter run --dart-define=SDUI_BASE_URL=https://your-api.com
+flutter build apk --release --dart-define=SDUI_BASE_URL=https://your-api.com
+```
+
+Optional: `SDUI_API_KEY` for Bearer auth. If `SDUI_BASE_URL` is empty, only bundled assets are used.
 
 Example JSON for the listing screen:
 
